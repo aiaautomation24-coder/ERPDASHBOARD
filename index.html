@@ -4,14 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AIA Job Track Dashboard</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1a5fa8">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="AIA Dashboard">
-<link rel="apple-touch-icon" href="icon-192.png">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -39,6 +31,14 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .hbtn-white{background:#fff;color:#1a1a2e}.hbtn-white:hover{background:#e8e8e8}
 .hbtn-green{background:#1a7a2a;color:#fff}.hbtn-green:hover{background:#155e22}
 .hbtn-amber{background:#c47a00;color:#fff}.hbtn-amber:hover{background:#a06000}
+
+/* COMPANY SWITCHER */
+.co-switch{display:flex;align-items:center;background:#0d0d1e;border-radius:999px;padding:3px;gap:2px;border:1px solid #3a3a5a;margin-right:6px}
+.co-btn{border:none;border-radius:999px;padding:5px 14px;font-size:11px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.05em}
+.co-btn.active-aia{background:#1a5fa8;color:#fff;box-shadow:0 2px 6px rgba(26,95,168,.5)}
+.co-btn.active-gp{background:#1a7a2a;color:#fff;box-shadow:0 2px 6px rgba(26,122,42,.5)}
+.co-btn.inactive{background:transparent;color:#888}
+.co-btn.inactive:hover{color:#ccc}
 .file-badge{font-size:10px;padding:3px 8px;border-radius:999px;font-weight:600}
 .fb-loaded{background:#e8f5e8;color:#2a6e2a}
 .fb-empty{background:#faeaea;color:#a02020}
@@ -174,6 +174,11 @@ th.num{text-align:right}
 .drill-jobs-table th{font-size:10px} .drill-jobs-table td{font-size:11px}
 tr.clickable-row{cursor:pointer} tr.clickable-row:hover td{background:#e8f0fb!important}
 
+/* ---- MISSED REPORT ---- */
+.mr-row-missed td{background:#fff5f5!important}
+.mr-status-badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:999px;font-weight:700}
+.mr-reason-sel,.mr-remark-inp{font-size:11px;padding:3px 7px;border:1px solid var(--border);border-radius:var(--radius);width:100%;color:var(--text);background:var(--surface)}
+
 /* ---- AGING REPORT ---- */
 .age-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 @media(max-width:700px){.age-grid{grid-template-columns:1fr 1fr}}
@@ -222,39 +227,64 @@ tr.clickable-row{cursor:pointer} tr.clickable-row:hover td{background:#e8f0fb!im
 
 <div class="header">
   <div class="header-left">
-    <h1>AIA Job Track Dashboard</h1>
+    <h1 id="header-title">AIA Job Track Dashboard</h1>
     <p id="date-display">Upload files to load data</p>
   </div>
   <div class="header-right">
+    <!-- COMPANY SWITCHER -->
+    <div class="co-switch">
+      <button class="co-btn active-aia" id="co-aia" onclick="switchCompany('AIA')">AIA</button>
+      <button class="co-btn inactive" id="co-gp" onclick="switchCompany('GP')">GP</button>
+    </div>
     <span id="file-status"></span>
     <!-- AIA Track Record Upload -->
-    <label class="hbtn hbtn-white" for="xlFile" title="Upload AIA Track Record (.xlsm/.xlsx)">
-      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-      AIA Track Record
-    </label>
-    <input type="file" id="xlFile" accept=".xlsx,.xlsm,.xls" style="display:none" onchange="loadTrackRecord(this)">
-    <span id="aia-badge" class="file-badge fb-empty">Not loaded</span>
+    <div id="aia-upload-group" style="display:flex;align-items:center;gap:6px">
+      <label class="hbtn hbtn-white" for="xlFile" title="Upload AIA Track Record (.xlsm/.xlsx)">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        AIA Track Record
+      </label>
+      <input type="file" id="xlFile" accept=".xlsx,.xlsm,.xls" style="display:none" onchange="loadTrackRecord(this,'AIA')">
+      <span id="aia-badge" class="file-badge fb-empty">Not loaded</span>
+    </div>
+    <!-- GP Track Record Upload -->
+    <div id="gp-upload-group" style="display:none;align-items:center;gap:6px">
+      <label class="hbtn" style="background:#1a7a2a;color:#fff;cursor:pointer" for="gpFile" title="Upload GP Track Record (.xlsx/.xls)">
+        <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+        GP Track Record
+      </label>
+      <input type="file" id="gpFile" accept=".xlsx,.xlsm,.xls" style="display:none" onchange="loadTrackRecord(this,'GP')">
+      <span id="gp-badge" class="file-badge fb-empty">Not loaded</span>
+    </div>
 
-    <!-- Printing Schedule Upload -->
-    <label class="hbtn" style="background:#16537e;color:#fff;cursor:pointer" for="printFile" title="Upload Printing Schedule">
-      🖨️ Printing
-    </label>
-    <input type="file" id="printFile" accept=".xlsx,.xlsm,.xls" style="display:none" onchange="loadScheduleFile(this,'printing')">
-    <span id="print-badge" class="file-badge fb-empty">Not loaded</span>
+    <!-- AIA Schedule Uploads (hidden when GP is active) -->
+    <div id="aia-schedule-group" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label class="hbtn" style="background:#16537e;color:#fff;cursor:pointer" for="printFile" title="Upload Printing Schedule">
+        🖨️ Printing
+      </label>
+      <input type="file" id="printFile" accept=".xlsx,.xlsm,.xls" style="display:none" onchange="loadScheduleFile(this,'printing')">
+      <span id="print-badge" class="file-badge fb-empty">Not loaded</span>
 
-    <!-- Punching Schedule Upload -->
-    <label class="hbtn" style="background:#5c3fa0;color:#fff;cursor:pointer" for="punchFile" title="Upload Punching Schedule">
-      👊 Punching
-    </label>
-    <input type="file" id="punchFile" accept=".xlsx,.xlsm,.xls" style="display:none" onchange="loadScheduleFile(this,'punching')">
-    <span id="punch-badge" class="file-badge fb-empty">Not loaded</span>
+      <label class="hbtn" style="background:#5c3fa0;color:#fff;cursor:pointer" for="punchFile" title="Upload Punching Schedule">
+        👊 Punching
+      </label>
+      <input type="file" id="punchFile" accept=".xlsx,.xlsm,.xls" style="display:none" onchange="loadScheduleFile(this,'punching')">
+      <span id="punch-badge" class="file-badge fb-empty">Not loaded</span>
 
-    <!-- Pasting Schedule Upload -->
-    <label class="hbtn" style="background:#b5541a;color:#fff;cursor:pointer" for="pasteFile" title="Upload Pasting Schedule">
-      📋 Pasting
-    </label>
-    <input type="file" id="pasteFile" accept=".xlsx,.xlsm,.xls" style="display:none" onchange="loadScheduleFile(this,'pasting')">
-    <span id="paste-badge" class="file-badge fb-empty">Not loaded</span>
+      <label class="hbtn" style="background:#b5541a;color:#fff;cursor:pointer" for="pasteFile" title="Upload Pasting Schedule">
+        📋 Pasting
+      </label>
+      <input type="file" id="pasteFile" accept=".xlsx,.xlsm,.xls" style="display:none" onchange="loadScheduleFile(this,'pasting')">
+      <span id="paste-badge" class="file-badge fb-empty">Not loaded</span>
+    </div>
+
+    <!-- GP Folding Schedule Upload (hidden when AIA is active) -->
+    <div id="gp-schedule-group" style="display:none;align-items:center;gap:6px">
+      <label class="hbtn" style="background:#16537e;color:#fff;cursor:pointer" for="foldFile" title="Upload Folding Schedule (col B=DocID, col R=MR Date)">
+        📂 Folding Schedule
+      </label>
+      <input type="file" id="foldFile" accept=".xlsx,.xlsm,.xls" style="display:none" onchange="loadFoldingSchedule(this)">
+      <span id="fold-badge" class="file-badge fb-empty">Not loaded</span>
+    </div>
 
     <button class="hbtn hbtn-green" onclick="downloadExcel()">
       <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
@@ -272,6 +302,8 @@ tr.clickable-row{cursor:pointer} tr.clickable-row:hover td{background:#e8f0fb!im
   <div class="tab" onclick="showTab('aging',this)">⏳ Aging Report</div>
   <div class="tab" onclick="showTab('timeline',this)">📈 Job Timeline</div>
   <div class="tab" onclick="showTab('meeting',this)">🤝 Meeting Summary</div>
+  <div class="tab" onclick="showTab('missreport',this)">📋 Missed Report</div>
+  <div class="tab" onclick="showTab('overdue',this)">🔴 Overdue Jobs</div>
 </div>
 
 <div class="main">
@@ -311,15 +343,17 @@ tr.clickable-row{cursor:pointer} tr.clickable-row:hover td{background:#e8f0fb!im
     <div class="card c-green"><div class="cl">Dispatched (DD)</div><div class="cv" id="ov-dd">—</div><div class="cs" id="ov-dd-pct">—</div></div>
     <div class="card c-amber"><div class="cl">Not Started</div><div class="cv" id="ov-ns">—</div><div class="cs" id="ov-ns-pct">—</div></div>
     <div class="card c-red"><div class="cl">Cancelled</div><div class="cv" id="ov-cancel">—</div><div class="cs" id="ov-cancel-pct">—</div></div>
-    <div class="card c-purple"><div class="cl">PH In Floor</div><div class="cv" id="ov-ph">—</div><div class="cs">Floor process</div></div>
-    <div class="card c-teal"><div class="cl">Screen In Floor</div><div class="cv" id="ov-screen">—</div><div class="cs">Floor process</div></div>
-    <div class="card"><div class="cl">Pasting In Floor</div><div class="cv" id="ov-pasting">—</div><div class="cs">Floor process</div></div>
-    <div class="card" style="background:#fdf5e0"><div class="cl">FOIL</div><div class="cv" id="ov-foil" style="color:#c47a2b">—</div><div class="cs">Floor process</div></div>
-    <div class="card" style="background:#e8f5e8"><div class="cl">Front Bal</div><div class="cv" id="ov-frontbal" style="color:#2a6e2a">—</div><div class="cs">Floor process</div></div>
-    <div class="card" style="background:#e8f0fb"><div class="cl">Lamination</div><div class="cv" id="ov-lam" style="color:#1a5fa8">—</div><div class="cs">Floor process</div></div>
-    <div class="card" style="background:#faeaea"><div class="cl">VDP</div><div class="cv" id="ov-vdp" style="color:#a02020">—</div><div class="cs">Floor process</div></div>
-    <div class="card" style="background:#f5f5f5"><div class="cl">VR</div><div class="cv" id="ov-vr" style="color:#555555">—</div><div class="cs">Floor process</div></div>
-    <div class="card"><div class="cl">Floor Jobs Total</div><div class="cv" id="ov-floor">—</div><div class="cs">In production</div></div>
+    <div class="card c-purple" id="card-ph"><div class="cl">PH In Floor</div><div class="cv" id="ov-ph">—</div><div class="cs">Floor process</div></div>
+    <div class="card c-teal" id="card-screen"><div class="cl">Screen In Floor</div><div class="cv" id="ov-screen">—</div><div class="cs">Floor process</div></div>
+    <div class="card" id="card-pasting"><div class="cl">Pasting In Floor</div><div class="cv" id="ov-pasting">—</div><div class="cs">Floor process</div></div>
+    <div class="card" style="background:#fdf5e0" id="card-foil"><div class="cl">FOIL</div><div class="cv" id="ov-foil" style="color:#c47a2b">—</div><div class="cs">Floor process</div></div>
+    <div class="card" style="background:#e8f5e8" id="card-frontbal"><div class="cl">Front Bal</div><div class="cv" id="ov-frontbal" style="color:#2a6e2a">—</div><div class="cs">Floor process</div></div>
+    <div class="card" style="background:#faeaea" id="card-vdp"><div class="cl">VDP</div><div class="cv" id="ov-vdp" style="color:#a02020">—</div><div class="cs">Floor process</div></div>
+    <div class="card" style="background:#f5f5f5" id="card-vr"><div class="cl">VR</div><div class="cv" id="ov-vr" style="color:#555555">—</div><div class="cs">Floor process</div></div>
+    <div class="card" id="card-floor"><div class="cl">Floor Jobs Total</div><div class="cv" id="ov-floor">—</div><div class="cs">In production</div></div>
+    <!-- GP-only cards (hidden in AIA mode) -->
+    <div class="card" id="card-fold"   style="display:none;background:#e0f5f5"><div class="cl">Folding(R)</div><div class="cv" id="ov-fold" style="color:#0d7377">—</div><div class="cs">Floor process</div></div>
+    <div class="card" id="card-outsert" style="display:none;background:#eeebfa"><div class="cl">Printing(R)</div><div class="cv" id="ov-outsert" style="color:#5c3fa0">—</div><div class="cs">Floor process</div></div>
   </div></div>
 
   <!-- OVERVIEW CHARTS -->
@@ -414,7 +448,7 @@ tr.clickable-row{cursor:pointer} tr.clickable-row:hover td{background:#e8f0fb!im
     <div class="sec-head"><h2>Missing List — By Customer (All Processes)</h2><span id="miss-cust-label">—</span></div>
     <div class="search-box"><input type="text" id="miss-search" placeholder="Search customer..." oninput="filterMissingCust()"></div>
     <div class="table-wrap" style="overflow-x:auto"><table>
-      <thead><tr><th>#</th><th>Customer Name</th><th class="num">Pending Qty</th><th class="num">Tot. Cut SH</th><th class="num">Total Jobs</th><th class="num">Not Started</th><th class="num">PRINTING</th><th class="num">COATING</th><th class="num">PASTING</th><th class="num">PUNCHING</th><th class="num">LAMINATION</th><th class="num">STRIPPING</th></tr></thead>
+      <thead><tr><th>#</th><th>Customer Name</th><th class="num">Pending Qty</th><th class="num">Tot. Cut SH</th><th class="num">Total Jobs</th><th class="num">Not Started</th><th class="num">PRINTING</th><th class="num">COATING</th><th class="num">PASTING</th><th class="num">PUNCHING</th><th class="num">STRIPPING</th></tr></thead>
       <tbody id="missing-cust-table"><tr><td colspan="14" style="text-align:center;color:var(--text2);padding:20px">—</td></tr></tbody>
     </table></div>
   </div>
@@ -466,7 +500,7 @@ tr.clickable-row{cursor:pointer} tr.clickable-row:hover td{background:#e8f0fb!im
     <div class="sec-head"><h2>Aging Detail — All Pending Jobs</h2><span id="aging-info">—</span></div>
     <div class="search-box"><input type="text" id="aging-search" placeholder="Search customer or JCNO..." oninput="filterAgingTable()"></div>
     <div class="table-wrap"><table>
-      <thead><tr>
+      <thead id="aging-thead"><tr>
         <th>#</th><th>JCNO</th><th>Job Name</th><th>Customer</th><th>Status</th>
         <th class="num">Pending Qty</th><th class="num">Cut SH</th>
         <th class="num">Commit Date</th><th class="num">Days Pending</th>
@@ -539,15 +573,227 @@ tr.clickable-row{cursor:pointer} tr.clickable-row:hover td{background:#e8f0fb!im
     <div id="meeting-summary-table-wrap" style="padding:14px 14px 0 14px">
       <div class="empty" style="padding:20px 0"><p>Upload data to view meeting summary</p></div>
     </div>
+
+    <!-- HEALTH PIE CHARTS -->
+    <div id="meeting-charts-wrap" style="display:none;padding:14px 14px 0 14px">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.06em">📊 Job Health Distribution</span>
+        <span id="meeting-chart-subtitle" style="font-size:11px;color:var(--text2)"></span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div class="chart-box" style="position:relative">
+          <h3>⏱️ Delay Bucket Distribution — % of All Jobs</h3>
+          <div style="position:relative;max-height:280px;display:flex;align-items:center;justify-content:center">
+            <canvas id="meeting-pie-delay" style="max-height:260px"></canvas>
+          </div>
+          <div id="meeting-pie-delay-center" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-10%);text-align:center;pointer-events:none">
+            <div id="meeting-pie-total-num" style="font-size:22px;font-weight:800;color:var(--text)">—</div>
+            <div style="font-size:10px;color:var(--text2);font-weight:600">Total Jobs</div>
+          </div>
+        </div>
+        <div class="chart-box" style="position:relative">
+          <h3>📋 Job Status Distribution — % of All Jobs</h3>
+          <div style="position:relative;max-height:280px;display:flex;align-items:center;justify-content:center">
+            <canvas id="meeting-pie-status" style="max-height:260px"></canvas>
+          </div>
+          <div id="meeting-pie-status-center" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-10%);text-align:center;pointer-events:none">
+            <div id="meeting-pie-active-num" style="font-size:22px;font-weight:800;color:var(--text)">—</div>
+            <div style="font-size:10px;color:var(--text2);font-weight:600">Active Jobs</div>
+          </div>
+        </div>
+      </div>
+      <div id="meeting-health-stats" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:14px"></div>
+    </div>
+
     <!-- DETAILED JOB LIST -->
     <div id="meeting-summary-wrap" style="padding:14px">
     </div>
   </div>
 </div>
 
+
+<!-- ===================== MISSED REPORT TAB ===================== -->
+<div id="tab-missreport" class="panel">
+  <div class="sec">
+    <div class="sec-head">
+      <h2>📋 Missed Report — Today's Scheduled Jobs</h2>
+      <span id="missrpt-info">—</span>
+    </div>
+
+    <!-- Controls bar -->
+    <div style="padding:10px 15px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <label style="font-size:11px;font-weight:700;color:var(--text2)">📅 Date:</label>
+      <input type="date" id="missrpt-date" style="padding:5px 9px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text);background:var(--surface)">
+      <label style="font-size:11px;font-weight:700;color:var(--text2)">Process:</label>
+      <select id="missrpt-proc" style="padding:5px 9px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;min-width:140px">
+        <option value="ALL">All Processes</option>
+        <option value="printing" class="aia-proc-opt">🖨️ Printing</option>
+        <option value="punching" class="aia-proc-opt">👊 Punching</option>
+        <option value="pasting"  class="aia-proc-opt">📋 Pasting</option>
+        <option value="folding"  class="gp-proc-opt" style="display:none">📂 Folding</option>
+      </select>
+      <button onclick="renderMissReport()" style="background:var(--accent);color:#fff;border:none;border-radius:var(--radius);padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">Load</button>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button onclick="downloadMissReportExcel('weekly')" style="background:#2a6e2a;color:#fff;border:none;border-radius:var(--radius);padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">⬇️ Weekly Excel</button>
+        <button onclick="downloadMissReportExcel('monthly')" style="background:#1a5fa8;color:#fff;border:none;border-radius:var(--radius);padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">⬇️ Monthly Excel</button>
+        <button onclick="saveMissReportEntries()" style="background:#b5541a;color:#fff;border:none;border-radius:var(--radius);padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">💾 Save Entries</button>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div style="display:flex;gap:10px;padding:12px 15px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+      <div class="card c-blue" style="min-width:100px"><div class="cl">Scheduled Today</div><div class="cv" id="mr-total">—</div></div>
+      <div class="card c-red" style="min-width:100px"><div class="cl">Missed</div><div class="cv" id="mr-missed">—</div></div>
+      <div class="card c-green" style="min-width:100px"><div class="cl">Completed</div><div class="cv" id="mr-done">—</div></div>
+      <div class="card c-amber" style="min-width:100px"><div class="cl">Pending</div><div class="cv" id="mr-pending">—</div></div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table id="missrpt-table">
+        <thead>
+          <tr>
+            <th style="width:34px"><input type="checkbox" id="mr-check-all" title="Select All" onchange="mrToggleAll(this.checked)"></th>
+            <th>JCNO</th><th>Job Name</th><th>Customer</th><th>Process</th>
+            <th class="num">Sched. Date</th><th class="num">Rev. Commit</th>
+            <th style="width:160px">Missed Reason</th>
+            <th style="width:200px">Remark</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="missrpt-tbody">
+          <tr><td colspan="10" style="text-align:center;color:var(--text2);padding:30px">Schedule files upload karo ani "Load" dabba</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Saved entries history -->
+  <div class="sec" style="margin-top:14px">
+    <div class="sec-head">
+      <h2>📜 Saved Missed Entries History</h2>
+      <span id="mr-history-count">—</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Date</th><th>JCNO</th><th>Job Name</th><th>Customer</th><th>Process</th>
+          <th>Reason</th><th>Remark</th><th>Saved At</th><th></th>
+        </tr></thead>
+        <tbody id="mr-history-tbody">
+          <tr><td colspan="9" style="text-align:center;color:var(--text2);padding:20px">No saved entries yet</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== OVERDUE JOBS TAB ===================== -->
+<div id="tab-overdue" class="panel">
+  <!-- Summary cards -->
+  <div class="cards" style="margin-bottom:14px">
+    <div class="card c-red"><div class="cl">Total Overdue</div><div class="cv" id="od-total">—</div><div class="cs">Commit date passed</div></div>
+    <div class="card" style="background:#fff3e0"><div class="cl">1–7 Days</div><div class="cv" id="od-1-7" style="color:#b5541a">—</div></div>
+    <div class="card" style="background:#fde9d9"><div class="cl">8–15 Days</div><div class="cv" id="od-8-15" style="color:#b5541a">—</div></div>
+    <div class="card" style="background:#faeaea"><div class="cl">16–30 Days</div><div class="cv" id="od-16-30" style="color:#a02020">—</div></div>
+    <div class="card" style="background:#3d0000"><div class="cl" style="color:#ffaaaa">30+ Days</div><div class="cv" id="od-30plus" style="color:#ff6666">—</div></div>
+    <div class="card c-amber"><div class="cl">Customers Affected</div><div class="cv" id="od-custs">—</div></div>
+  </div>
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div style="font-size:11px;font-weight:700;color:var(--text2)">Commit Date filters same as main filter</div>
+    <button onclick="downloadOverdueExcel()" style="background:#a02020;color:#fff;border:none;border-radius:var(--radius);padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">⬇️ Download Overdue Excel</button>
+  </div>
+
+  <div class="chart-grid" style="margin-bottom:14px">
+    <div class="chart-box" style="grid-column:1/-1">
+      <h3>🔴 Overdue Jobs by Customer — Bucket Distribution</h3>
+      <canvas id="chart-overdue" style="max-height:260px"></canvas>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><h2>Overdue Jobs Detail</h2><span id="od-info">—</span></div>
+    <div class="search-box"><input type="text" id="od-search" placeholder="Search JCNO or customer..." oninput="filterOverdueTable()"></div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>#</th><th>JCNO</th><th>Job Name</th><th>Customer</th><th>Status</th>
+        <th class="num">Pending Qty</th><th class="num">Commit Date</th>
+        <th class="num">Days Overdue</th><th>Bucket</th>
+      </tr></thead>
+      <tbody id="od-table"><tr><td colspan="9" style="text-align:center;color:var(--text2);padding:20px">Upload data to view overdue jobs</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
 </div><!-- /main -->
 
 <script>
+// ===================== COMPANY STATE =====================
+var COMPANY = 'AIA'; // 'AIA' or 'GP'
+var D_AIA = null;
+var D_GP  = null;
+
+var GP_ONLY_CARDS  = ['card-fold','card-outsert'];
+var AIA_ONLY_CARDS = ['card-ph','card-screen','card-pasting','card-foil','card-frontbal','card-vdp','card-vr','card-floor'];
+
+function updateCardVisibility(){
+  var isGP = (COMPANY === 'GP');
+  AIA_ONLY_CARDS.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=isGP?'none':'';});
+  GP_ONLY_CARDS.forEach(function(id){var el=document.getElementById(id);if(el)el.style.display=isGP?'':'none';});
+  document.querySelectorAll('.aia-proc-opt').forEach(function(el){el.style.display=isGP?'none':'';});
+  document.querySelectorAll('.gp-proc-opt').forEach(function(el){el.style.display=isGP?'':'none';});
+  var proc=document.getElementById('missrpt-proc');if(proc)proc.value='ALL';
+}
+
+function switchCompany(co){
+  if(co===COMPANY) return;
+  if(COMPANY==='AIA') D_AIA=cloneState(D); else D_GP=cloneState(D);
+  COMPANY=co;
+  var saved=co==='AIA'?D_AIA:D_GP;
+  if(saved) restoreState(D,saved); else resetDState();
+  var coAia=document.getElementById('co-aia'), coGp=document.getElementById('co-gp');
+  coAia.className='co-btn '+(co==='AIA'?'active-aia':'inactive');
+  coGp.className='co-btn '+(co==='GP'?'active-gp':'inactive');
+  document.getElementById('aia-upload-group').style.display=(co==='AIA')?'flex':'none';
+  document.getElementById('gp-upload-group').style.display=(co==='GP')?'flex':'none';
+  document.getElementById('aia-schedule-group').style.display=(co==='AIA')?'flex':'none';
+  document.getElementById('gp-schedule-group').style.display=(co==='GP')?'flex':'none';
+  updateCardVisibility();
+  document.getElementById('header-title').textContent=co+' Job Track Dashboard';
+  document.title=co+' Job Track Dashboard';
+  if(D.loaded){renderAll();renderMissReport();}else{clearAllPanels();}
+}
+
+function cloneState(src){var c={};for(var k in src){if(src.hasOwnProperty(k))c[k]=src[k];}return c;}
+function restoreState(target,src){for(var k in src){if(src.hasOwnProperty(k))target[k]=src[k];}}
+
+function resetDState(){
+  D.loaded=false; D.lastUpdate='—';
+  D.startDate=new Date('2026-01-01'); D.endDate=new Date();
+  D.totalJobs=0;D.dd=0;D.ns=0;D.cancel=0;D.ph=0;D.screen=0;D.pasting=0;
+  D.monthly=[];D.customers=[];D.missingCust=[];D.missingByProcess=[];
+  D.floorJobs=[];D.foldJobs=[];D.agingRows=[];
+  D.schedPrinting={};D.schedPunching={};D.schedPasting={};D.schedFolding={};
+  D._rawRows=[];D._keys={};D._filterFrom=null;D._filterTo=null;
+  D.missedEntries=[];
+  document.getElementById('date-display').textContent='Upload files to load data';
+  document.getElementById('file-status').textContent='';
+}
+
+function clearAllPanels(){
+  ['total-records','ov-total','ov-dd','ov-ns','ov-cancel','ov-ph','ov-screen','ov-pasting'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.textContent='—';
+  });
+  ['monthly-table','status-table','floor-table','fold-table','missing-process-table',
+   'missing-cust-table','cust-table','aging-table'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.innerHTML='<tr><td colspan="20" style="text-align:center;color:var(--text2);padding:20px">Upload '+COMPANY+' Track Record to load data</td></tr>';
+  });
+  document.getElementById('date-display').textContent='Upload files to load data';
+  document.getElementById('file-status').textContent='';
+}
+
 // ===================== STATE =====================
 var D = {
   loaded: false,
@@ -566,15 +812,19 @@ var D = {
   schedPrinting: {},
   schedPunching: {},
   schedPasting: {},
+  schedFolding: {},
   // Raw data storage for re-filtering
   _rawRows: [],
   _keys: {},
   _filterFrom: null,
-  _filterTo: null
+  _filterTo: null,
+  // Missed report saved entries
+  missedEntries: []
 };
 
 function fmt(n){ if(!n && n!==0) return '—'; return Math.round(n).toLocaleString('en-IN'); }
 function fmtDate(d){ if(!d) return '—'; return d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear(); }
+function fmtDDMMYYYY(d){ if(!d||isNaN(d)) return '—'; return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear(); }
 function pct(a,b){ return b ? Math.round(a/b*100)+'%' : '0%'; }
 
 // ===================== DATE FILTER =====================
@@ -590,10 +840,10 @@ function setQuick(type, btn){
   var from, to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
   if(type==='7days'){
     from = new Date(jan2026);
-    to   = new Date(today); to.setDate(to.getDate() - 7); to.setHours(23,59,59,999);
+    to = new Date(today); to.setDate(to.getDate()-7); to.setHours(23,59,59,999);
   } else if(type==='15days'){
     from = new Date(jan2026);
-    to   = new Date(today); to.setDate(to.getDate() - 15); to.setHours(23,59,59,999);
+    to = new Date(today); to.setDate(to.getDate()-15); to.setHours(23,59,59,999);
   } else if(type==='thismonth'){
     from = new Date(now.getFullYear(), now.getMonth(), 1);
     if(from < jan2026) from = new Date(jan2026);
@@ -613,6 +863,12 @@ function setQuick(type, btn){
   }
   document.getElementById('filter-from').value = toInputDate(from);
   document.getElementById('filter-to').value   = toInputDate(to);
+  if((type==='7days'||type==='15days') && D.loaded){
+    to.setHours(23,59,59,999);
+    D._filterFrom=from; D._filterTo=to;
+    document.getElementById('filter-info-text').textContent='Showing: '+fmtDate(from)+' -> '+fmtDate(to);
+    reProcessAndRender();
+  }
 }
 
 function onDateChange(){
@@ -671,6 +927,8 @@ function showTab(id, el){
   document.getElementById('tab-'+id).classList.add('active');
   if(el) el.classList.add('active');
   if(id==='meeting' && D.loaded) renderMeetingSummary();
+  if(id==='missreport') renderMissReport();
+  if(id==='overdue' && D.loaded) renderOverdueTab();
 }
 
 // ---- LOADING SPINNER ----
@@ -796,9 +1054,6 @@ function parseScheduleSheet(rows){
     return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
   }
 
-  // rawDates: JCNO → array of all dates found across schedule
-  var rawDates = {};
-
   for(var r = 0; r < rows.length; r++){
     var row = rows[r];
     if(!row || !row.length) continue;
@@ -809,16 +1064,14 @@ function parseScheduleSheet(rows){
     // JCNO col0 → Printing job row
     if(isJCNO(col0) && currentDate){
       var jcno = String(col0).trim();
-      if(!rawDates[jcno]) rawDates[jcno] = [];
-      rawDates[jcno].push(new Date(currentDate));
+      if(!map[jcno]) map[jcno] = fmtD(currentDate);
       continue;
     }
 
     // JCNO col1 → Punching/Pasting job row
     if(isJCNO(col1) && currentDate){
       var jcno = String(col1).trim();
-      if(!rawDates[jcno]) rawDates[jcno] = [];
-      rawDates[jcno].push(new Date(currentDate));
+      if(!map[jcno]) map[jcno] = fmtD(currentDate);
       continue;
     }
 
@@ -832,16 +1085,318 @@ function parseScheduleSheet(rows){
       }
     }
   }
+  return map;
+}
 
-  // For each JCNO: pick the EARLIEST date (closest scheduled date)
-  // This avoids stale/duplicate entries with wrong future dates winning
-  Object.keys(rawDates).forEach(function(jcno){
-    var dates = rawDates[jcno];
-    dates.sort(function(a,b){ return a-b; });
-    map[jcno] = fmtD(dates[0]);
+// ===================== LOAD TRACK RECORD (AIA or GP) =====================
+function loadTrackRecord(input, co){
+  var file = input.files[0]; if(!file) return;
+  var loadCo = co || COMPANY;
+  showLoading('Reading ' + file.name + '...');
+  setProgress(10);
+  document.getElementById('file-status').textContent = 'Reading '+file.name+'...';
+  var reader = new FileReader();
+  reader.onload = function(e){
+    setTimeout(function(){
+    try{
+      var wb = XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:true,bookVBA:false,bookFiles:false,bookProps:false});
+      var trSheetName;
+      if(loadCo === 'GP'){
+        trSheetName = wb.SheetNames.find(function(n){ return n.toLowerCase().includes('track') || n.toLowerCase().includes('record'); });
+        if(!trSheetName) trSheetName = wb.SheetNames.find(function(n){ return !n.toLowerCase().includes('floor') && n !== 'Sheet2'; }) || wb.SheetNames[0];
+      } else {
+        trSheetName = wb.SheetNames.find(function(n){ return n.toLowerCase().includes('track') || n.toLowerCase().includes('record'); }) || wb.SheetNames[0];
+      }
+      var trSheet = wb.Sheets[trSheetName];
+      var fjSheet = wb.Sheets['FLOOR JOBS'] || (loadCo === 'GP' ? wb.Sheets['Sheet2'] : null);
+      if(trSheet && trSheet['!ref']){
+        var range = XLSX.utils.decode_range(trSheet['!ref']);
+        if(range.e.c > 120) range.e.c = 120;
+        trSheet['!ref'] = XLSX.utils.encode_range(range);
+      }
+      setTimeout(function(){
+        try{
+          var trData = XLSX.utils.sheet_to_json(trSheet,{defval:''});
+          if(loadCo === 'GP'){
+            processTrackRecordGP(trData);
+          } else {
+            processTrackRecord(trData);
+          }
+          if(fjSheet) processFloorJobs(fjSheet);
+          var badgeId = loadCo === 'GP' ? 'gp-badge' : 'aia-badge';
+          document.getElementById(badgeId).textContent = '✓ '+file.name.substring(0,20);
+          document.getElementById(badgeId).className = 'file-badge fb-loaded';
+          document.getElementById('file-status').textContent = '✓ '+trData.length+' rows loaded';
+        }catch(err2){
+          document.getElementById('file-status').textContent = '✗ '+err2.message;
+          hideLoading();
+        }
+      },100);
+    }catch(err){
+      document.getElementById('file-status').textContent = '✗ '+err.message;
+      var badgeId = loadCo === 'GP' ? 'gp-badge' : 'aia-badge';
+      document.getElementById(badgeId).textContent = 'Error';
+      hideLoading();
+    }
+    },100);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ===================== GP TRACK RECORD PROCESSOR =====================
+// GP cha processTrackRecord — AIA cha normalizeStatus TOUCH NAHI
+function processTrackRecordGP(data){
+  if(!data.length) return;
+  var keys = Object.keys(data[0]);
+  var dateKey = keys.find(function(k){return k.toLowerCase().includes('doc')&&k.toLowerCase().includes('date')}) || keys[1];
+  var statusKey = 'Job_Status';
+  var custKey = keys.find(function(k){
+    var kl = k.toLowerCase().replace(/\s+/g,'');
+    return kl==='customername'||kl==='clientname'||kl.includes('customer')||kl.includes('client');
+  }) || 'CUSTOMER NAME';
+  var pendKey = keys.find(function(k){return k.includes('Pending')}) || 'Pending\nQty ';
+  var cutKey  = keys.find(function(k){return k.includes('Cut')}) || 'Tot. Cut\n   SH';
+  var nextKey = 'NextProcess';
+  var jcnoKey = keys.find(function(k){
+    var ku=k.toUpperCase().replace(/[\s\n_]+/g,'');
+    return ku==='JCNO'||ku.includes('JCNO')||k==='DocId'||k.toLowerCase()==='docid'||k==='JobNo'||k==='Jc No';
+  }) || keys[0];
+  var jobNameKey = keys.find(function(k){
+    var kl=k.toLowerCase().replace(/[\s\n]+/g,'');
+    return kl.includes('jobname')||kl.includes('jobdescription')||kl.includes('jobdesc')||(k.toLowerCase().includes('job')&&k.toLowerCase().includes('name'));
+  }) || '';
+  var revCommitKey = keys.find(function(k){
+    var kl=k.toLowerCase().replace(/[\s_\n]/g,'');
+    return kl==='revisedcommitementdate'||kl.includes('revisedcommit');
+  }) || keys.find(function(k){
+    var kl=k.toLowerCase().replace(/\s+/g,'');
+    return kl==='commitdate'||kl.includes('commitdate');
+  }) || 'revised commitement date';
+  var dispatchDateKey = keys.find(function(k){
+    var kl=k.toLowerCase().replace(/[\s\n_]+/g,'');
+    return kl==='orderdate'||kl==='dispatchdate'||kl==='lastdespatchdate'||(k.toLowerCase().includes('dispatch')&&k.toLowerCase().includes('date'));
+  }) || '';
+  var poDateKey = keys.find(function(k){
+    var kl=k.toLowerCase().replace(/[\s_\n]/g,'');
+    return kl.includes('podate')||(k.toLowerCase().includes('po')&&k.toLowerCase().includes('date'));
+  }) || '';
+  var rmStatusKey = keys.find(function(k){
+    var kl=k.toLowerCase().replace(/[\s_\n]/g,'');
+    return kl.includes('rmstatus')||kl.includes('rawmaterial')||(k.toLowerCase().includes('rm')&&k.toLowerCase().includes('status'));
+  }) || '';
+
+  D._rawRows = data;
+  D._keys = {dateKey:dateKey,statusKey:statusKey,custKey:custKey,pendKey:pendKey,cutKey:cutKey,nextKey:nextKey,jcnoKey:jcnoKey,jobNameKey:jobNameKey,revCommitKey:revCommitKey,dispatchDateKey:dispatchDateKey,poDateKey:poDateKey,rmStatusKey:rmStatusKey};
+
+  // Normalize GP statuses early so allRows filter uses normalized values
+  function normalizeStatusGP(s){
+    if(!s) return 'OTHER';
+    var st=String(s).trim();
+    var sl=st.toLowerCase();
+    if(st==='Job Not Started') return 'Job Not Started';
+    if(sl==='printing(r)'  || sl==='printing (r)' ) return 'Printing(R)';
+    if(sl==='folding(r)'   || sl==='folding (r)'  ) return 'Folding(R)';
+    return st;
+  }
+  data = data.map(function(r){
+    var nr=Object.assign({},r);
+    if(nr[statusKey]!==undefined) nr[statusKey]=normalizeStatusGP(nr[statusKey]);
+    return nr;
+  });
+  D._rawRows = data;
+
+  var jan2026Init = new Date('2026-01-01');
+  var todayInit = new Date(); todayInit.setHours(23,59,59,999);
+  D._filterFrom = new Date(jan2026Init); D._filterFrom.setHours(0,0,0,0);
+  D._filterTo   = todayInit;
+  document.getElementById('filter-from').value = toInputDate(jan2026Init);
+  document.getElementById('filter-to').value   = toInputDate(todayInit);
+
+  var allRows = data.filter(function(r){
+    var d=new Date(r[revCommitKey]);
+    return !isNaN(d)&&d>=D._filterFrom&&d<=D._filterTo;
+  });
+  if(!allRows.length){ alert('No data found in date range. Try adjusting filter.'); hideLoading(); return; }
+  setProgress(60);
+  document.getElementById('loading-text').textContent='Computing metrics...';
+  setTimeout(function(){
+    computeFromRowsGP(allRows, D._keys, D._filterFrom, D._filterTo);
+    setProgress(90);
+    D.loaded=true;
+    document.getElementById('loading-text').textContent='Rendering dashboard...';
+    setTimeout(function(){
+      renderAll();
+      hideLoading();
+      document.getElementById('gp-badge').className='file-badge fb-loaded';
+      document.getElementById('gp-badge').textContent='Loaded';
+    },80);
+  },50);
+}
+
+// ===================== GP computeFromRows =====================
+function computeFromRowsGP(rows, k, fromD, toD){
+  var statusKey=k.statusKey,custKey=k.custKey,pendKey=k.pendKey,cutKey=k.cutKey,jcnoKey=k.jcnoKey,revCommitKey=k.revCommitKey;
+  D.endDate=toD; D.startDate=fromD; D.lastUpdate=fmtDate(new Date());
+  function uniqJCNO(arr){var s={};arr.forEach(function(r){s[r[jcnoKey]]=1;});return Object.keys(s).length;}
+  D.totalJobs=uniqJCNO(rows);
+  D.dd=uniqJCNO(rows.filter(function(r){return r[statusKey]==='DD';}));
+  D.ns=uniqJCNO(rows.filter(function(r){return r[statusKey]==='Job Not Started';}));
+  D.cancel=uniqJCNO(rows.filter(function(r){return r[statusKey]==='CANCELLED';}));
+  D.ph=0; D.screen=0; D.pasting=0;
+
+  // Monthly
+  var monthMap={};
+  rows.forEach(function(r){
+    var d=new Date(r[revCommitKey]);
+    var key=d.getFullYear()+'-'+(d.getMonth()+1);
+    var lbl=['January','February','March','April','May','June','July','August','September','October','November','December'][d.getMonth()]+' '+d.getFullYear();
+    if(!monthMap[key]) monthMap[key]={month:lbl,jcnos:{},dd:{},ns:{},cancel:{},sort:d.getFullYear()*100+d.getMonth()};
+    var s=r[statusKey];var jc=r[jcnoKey];
+    monthMap[key].jcnos[jc]=1;
+    if(s==='DD') monthMap[key].dd[jc]=1;
+    else if(s==='Job Not Started') monthMap[key].ns[jc]=1;
+    else if(s==='CANCELLED') monthMap[key].cancel[jc]=1;
+  });
+  D.monthly=Object.values(monthMap).sort(function(a,b){return a.sort-b.sort;}).map(function(m){
+    return {month:m.month,sort:m.sort,total:Object.keys(m.jcnos).length,dd:Object.keys(m.dd).length,ns:Object.keys(m.ns).length,cancel:Object.keys(m.cancel).length};
   });
 
-  return map;
+  // Status breakdown
+  var stMap={};
+  rows.forEach(function(r){
+    var s=r[statusKey]||'Unknown';var jc=r[jcnoKey];
+    if(!stMap[s]) stMap[s]={jcnos:{},pqty:0,cutsh:0};
+    if(!stMap[s].jcnos[jc]){stMap[s].jcnos[jc]=1;stMap[s].pqty+=parseFloat(r[pendKey])||0;stMap[s].cutsh+=parseFloat(r[cutKey])||0;}
+  });
+  D.statusBreakdown=Object.entries(stMap).map(function(e){return[e[0],Object.keys(e[1].jcnos).length,e[1].pqty,e[1].cutsh];}).sort(function(a,b){return b[1]-a[1];});
+
+  // Customers
+  var custMap={};
+  rows.forEach(function(r){
+    var c=String(r[custKey]).trim();var jc=r[jcnoKey];
+    if(!custMap[c]) custMap[c]={name:c,jcnos:{},dd:{},ns:{},cancel:{}};
+    custMap[c].jcnos[jc]=1;
+    var s=r[statusKey];
+    if(s==='DD') custMap[c].dd[jc]=1;
+    else if(s==='Job Not Started') custMap[c].ns[jc]=1;
+    else if(s==='CANCELLED') custMap[c].cancel[jc]=1;
+  });
+  D.customers=Object.values(custMap).map(function(c){
+    return{name:c.name,total:Object.keys(c.jcnos).length,dd:Object.keys(c.dd).length,ns:Object.keys(c.ns).length,cancel:Object.keys(c.cancel).length};
+  }).sort(function(a,b){return b.total-a.total;});
+
+  var GP_PENDING = ['Printing(R)','Folding(R)','Job Not Started'];
+
+  // Aging — GP statuses
+  var today3=new Date();today3.setHours(23,59,59,999);
+  var pendingStatuses=GP_PENDING;
+  D.agingRows=D._rawRows.filter(function(r){
+    if(pendingStatuses.indexOf(r[statusKey])<0) return false;
+    var rd=new Date(r[revCommitKey]);
+    return !isNaN(rd)&&rd>=fromD&&rd<=toD;
+  }).map(function(r){
+    var rd=new Date(r[revCommitKey]);
+    var days=Math.floor((today3-rd)/86400000);
+    var bucket=days<=7?'0-7':days<=15?'8-15':days<=30?'16-30':'30+';
+    return{
+      jcno:String(r[k.jcnoKey]||'').trim(),jobName:k.jobNameKey?String(r[k.jobNameKey]||'').trim():'',
+      cust:String(r[k.custKey]).trim(),status:r[statusKey],
+      pqty:parseFloat(r[k.pendKey])||0,cutsh:parseFloat(r[k.cutKey])||0,
+      revDate:rd,days:days,bucket:bucket,
+      poDate:(function(){var raw=k.poDateKey?r[k.poDateKey]:'';if(!raw&&raw!==0)return'';if(typeof raw==='number'){var exD=new Date(Math.round((raw-25569)*86400000));return isNaN(exD)?'':fmtDDMMYYYY(exD);}if(raw instanceof Date)return isNaN(raw)?'':fmtDDMMYYYY(raw);var s=String(raw).trim();if(!s)return'';var d=new Date(s);if(!isNaN(d))return fmtDDMMYYYY(d);return s;})(),
+      rmStatus:k.rmStatusKey?String(r[k.rmStatusKey]||'').trim():''
+    };
+  }).sort(function(a,b){return b.days-a.days;});
+
+  // Missing list — GP
+  var allowedMiss=GP_PENDING;
+  var missRows=D._rawRows.filter(function(r){
+    if(allowedMiss.indexOf(r[statusKey])<0) return false;
+    var rd=new Date(r[revCommitKey]);
+    if(isNaN(rd)) return false;
+    return rd>=fromD&&rd<=toD;
+  });
+  var missProcesses=['Printing(R)','Folding(R)','Job Not Started'];
+  var missMap={};
+  missRows.forEach(function(r){
+    var c=String(r[custKey]).trim();var jc=r[jcnoKey];var s=r[statusKey];
+    if(!missMap[c]){missMap[c]={name:c,jcnos:{},pqty:0,cutsh:0,nsJcnos:{},procJcnos:{}};missProcesses.forEach(function(p){missMap[c].procJcnos[p]={};});}
+    if(!missMap[c].jcnos[jc]){missMap[c].jcnos[jc]=1;try{missMap[c].pqty+=parseFloat(r[pendKey])||0;}catch(e){}try{missMap[c].cutsh+=parseFloat(r[cutKey])||0;}catch(e){}}
+    if(s==='Job Not Started') missMap[c].nsJcnos[jc]=1;
+    missProcesses.forEach(function(p){if(s===p)missMap[c].procJcnos[p][jc]=1;});
+  });
+  D.missingCust=Object.values(missMap).map(function(c){
+    var procCounts={};missProcesses.forEach(function(p){procCounts[p]=Object.keys(c.procJcnos[p]).length;});
+    return{name:c.name,jobs:Object.keys(c.jcnos).length,nsJobs:Object.keys(c.nsJcnos).length,pqty:c.pqty,cutsh:c.cutsh,proc:procCounts};
+  }).sort(function(a,b){return b.jobs-a.jobs;});
+  D.missProcesses=missProcesses;
+
+  var mpMap={};
+  missRows.forEach(function(r){
+    var s=r[statusKey];var jc=r[jcnoKey];
+    if(!mpMap[s]) mpMap[s]={status:s,jcnos:{},pqty:0,cutsh:0};
+    if(!mpMap[s].jcnos[jc]){mpMap[s].jcnos[jc]=1;try{mpMap[s].pqty+=parseFloat(r[pendKey])||0;}catch(e){}try{mpMap[s].cutsh+=parseFloat(r[cutKey])||0;}catch(e){}}
+  });
+  D.missingByProcess=allowedMiss.map(function(s){if(!mpMap[s])return null;return{status:s,jobs:Object.keys(mpMap[s].jcnos).length,pqty:mpMap[s].pqty,cutsh:mpMap[s].cutsh};}).filter(Boolean);
+
+  // Floor jobs — GP
+  var floorStatuses=['Printing(R)','Folding(R)'];
+  var fjMap={};
+  D._rawRows.forEach(function(r){
+    var s=r[statusKey];var jc=r[jcnoKey];
+    if(floorStatuses.indexOf(s)<0) return;
+    var rd=new Date(r[revCommitKey]);if(isNaN(rd)||rd<fromD||rd>toD) return;
+    if(!fjMap[s]) fjMap[s]={proc:s,pqty:0,cutsh:0,jcnos:{},moMap:{}};
+    var pq=parseFloat(r[pendKey])||0,cs=parseFloat(r[cutKey])||0;
+    if(!fjMap[s].jcnos[jc]){fjMap[s].jcnos[jc]=1;fjMap[s].pqty+=pq;fjMap[s].cutsh+=cs;}
+    var mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][rd.getMonth()];
+    var moSort=rd.getFullYear()*100+rd.getMonth();
+    if(!fjMap[s].moMap[mo]) fjMap[s].moMap[mo]={mo:mo,pqty:0,cutsh:0,jcnos:{},sort:moSort};
+    if(!fjMap[s].moMap[mo].jcnos[jc]){fjMap[s].moMap[mo].jcnos[jc]=1;fjMap[s].moMap[mo].pqty+=pq;fjMap[s].moMap[mo].cutsh+=cs;}
+  });
+  D.floorJobs=floorStatuses.map(function(s){
+    var f=fjMap[s];if(!f)return null;
+    var subs=Object.values(f.moMap).sort(function(a,b){return a.sort-b.sort;}).map(function(m){return{mo:m.mo,pqty:m.pqty,cutsh:m.cutsh,cnt:Object.keys(m.jcnos).length};});
+    return{proc:s,pqty:f.pqty,cutsh:f.cutsh,cnt:Object.keys(f.jcnos).length,subs:subs};
+  }).filter(Boolean);
+}
+
+// ===================== GP FOLDING SCHEDULE LOADER =====================
+function loadFoldingSchedule(input){
+  var file=input.files[0];if(!file)return;
+  document.getElementById('fold-badge').textContent='Loading...';
+  document.getElementById('fold-badge').className='file-badge fb-empty';
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(new Uint8Array(e.target.result),{type:'array',cellDates:false,bookVBA:false});
+      var sheetName=wb.SheetNames.indexOf('Full Plan')>=0?'Full Plan':wb.SheetNames[0];
+      var ws=wb.Sheets[sheetName];
+      if(!ws){document.getElementById('fold-badge').textContent='✗ No sheet';return;}
+      var raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
+      var map={};
+      var MONTHS={JANUARY:0,FEBRUARY:1,MARCH:2,APRIL:3,MAY:4,JUNE:5,JULY:6,AUGUST:7,SEPTEMBER:8,OCTOBER:9,NOVEMBER:10,DECEMBER:11,JAN:0,FEB:1,MAR:2,APR:3,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+      function excelSerialToDate(serial){if(typeof serial!=='number'||serial<45292||serial>46762)return null;var tmp=new Date((serial-25569)*86400000);return new Date(tmp.getUTCFullYear(),tmp.getUTCMonth(),tmp.getUTCDate());}
+      function tryDate(v){if(v===null||v===undefined||v==='')return null;if(typeof v==='number')return excelSerialToDate(v);var s=String(v).trim();if(!s)return null;var m1=s.match(/(\d{1,2})\s+([A-Z]+)\s+(\d{4})/i);if(m1){var mo=MONTHS[m1[2].toUpperCase()];if(mo!==undefined){var d=new Date(+m1[3],mo,+m1[1]);if(!isNaN(d.getTime()))return d;}}var m2=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);if(m2){var d=new Date(+m2[3],+m2[2]-1,+m2[1]);if(!isNaN(d.getTime()))return d;}var m3=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m3){var d=new Date(+m3[1],+m3[2]-1,+m3[3]);if(!isNaN(d.getTime()))return d;}return null;}
+      function fmtD(d){return('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();}
+      function isJCNO(v){if(!v&&v!==0)return false;return /^[A-Z0-9]{2,}\/[0-9]+/i.test(String(v).trim());}
+      for(var r=0;r<raw.length;r++){
+        var row=raw[r];if(!row||!row.length)continue;
+        var colB=row[1];var colR=row[17];
+        if(!colB)continue;
+        if(isJCNO(colB)){var d=tryDate(colR);if(d){var jcno=String(colB).trim();if(!map[jcno])map[jcno]=fmtD(d);}}
+      }
+      D.schedFolding=map;
+      var count=Object.keys(map).length;
+      document.getElementById('fold-badge').textContent='✓ '+count+' jobs';
+      document.getElementById('fold-badge').className='file-badge fb-loaded';
+      if(D.loaded) renderAgingTab();
+    }catch(err){
+      document.getElementById('fold-badge').textContent='✗ Error';
+      console.error('Folding schedule load error:',err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
 }
 
 // ===================== LOAD AIA TRACK RECORD =====================
@@ -949,19 +1504,32 @@ function processTrackRecord(data){
            (k.toLowerCase().includes('dispatch') && k.toLowerCase().includes('date'));
   }) || '';
 
+  // PO Date key
+  var poDateKey = keys.find(function(k){
+    var kl = k.toLowerCase().replace(/[\s_\n]/g,'');
+    return kl.includes('podate') || (k.toLowerCase().includes('po') && k.toLowerCase().includes('date'));
+  }) || '';
+
+  // RM Status key
+  var rmStatusKey = keys.find(function(k){
+    var kl = k.toLowerCase().replace(/[\s_\n]/g,'');
+    return kl.includes('rmstatus') || kl.includes('rawmaterial') ||
+           (k.toLowerCase().includes('rm') && k.toLowerCase().includes('status'));
+  }) || '';
+
   // ===================== STATUS NORMALIZATION (AIA Track Record → Dashboard format) =====================
   function normalizeStatus(s){
     if(!s) return 'DD';
     var st = String(s).trim();
     var sl = st.toLowerCase();
     if(st==='Job Not Started') return 'Job Not Started';
-    if(sl.startsWith('printing'))  return 'PRINTING';
-    if(sl.startsWith('coating'))   return 'COATING';
-    if(sl.startsWith('pasting'))   return 'PASTING';
-    if(sl.startsWith('punching'))  return 'PUNCHING';
-    if(sl.startsWith('lamination'))return 'LAMINATION';
-    if(sl.startsWith('stripping')) return 'STRIPPING';
-    if(sl==='job cancelled')       return 'DD';
+    if(sl==='printing(r)'   || sl==='printing (r)' ) return 'PRINTING';
+    if(sl==='coating(r)'    || sl==='coating (r)'  ) return 'COATING';
+    if(sl==='pasting(r)'    || sl==='pasting (r)'  ) return 'PASTING';
+    if(sl==='punching(r)'   || sl==='punching (r)' ) return 'PUNCHING';
+
+    if(sl==='stripping(r)'  || sl==='stripping (r)') return 'STRIPPING';
+    if(sl==='job cancelled') return 'CANCELLED';
     return 'DD';
   }
   data = data.map(function(r){
@@ -973,7 +1541,7 @@ function processTrackRecord(data){
 
   // Store raw data + key mapping
   D._rawRows = data;
-  D._keys = { dateKey:dateKey, statusKey:statusKey, custKey:custKey, pendKey:pendKey, cutKey:cutKey, nextKey:nextKey, jcnoKey:jcnoKey, jobNameKey:jobNameKey, revCommitKey:revCommitKey, dispatchDateKey:dispatchDateKey };
+  D._keys = { dateKey:dateKey, statusKey:statusKey, custKey:custKey, pendKey:pendKey, cutKey:cutKey, nextKey:nextKey, jcnoKey:jcnoKey, jobNameKey:jobNameKey, revCommitKey:revCommitKey, dispatchDateKey:dispatchDateKey, poDateKey:poDateKey, rmStatusKey:rmStatusKey };
 
   // Find min & max Commit Date from file
   var jan2026 = new Date(2026, 0, 1);
@@ -1086,7 +1654,7 @@ function computeFromRows(rows, k, fromD, toD){
 
   // ---- AGING REPORT ----
   var today3 = new Date(); today3.setHours(23,59,59,999);
-  var pendingStatuses = ['PRINTING','COATING','PASTING','PUNCHING','LAMINATION','STRIPPING','Job Not Started'];
+  var pendingStatuses = ['PRINTING','COATING','PASTING','PUNCHING','STRIPPING','Job Not Started'];
   D.agingRows = D._rawRows.filter(function(r){
     if(pendingStatuses.indexOf(r[statusKey]) < 0) return false;
     var rd = new Date(r[revCommitKey]);
@@ -1104,12 +1672,14 @@ function computeFromRows(rows, k, fromD, toD){
       cutsh: parseFloat(r[k.cutKey])||0,
       revDate: rd,
       days: days,
-      bucket: bucket
+      bucket: bucket,
+      poDate:(function(){var raw=k.poDateKey?r[k.poDateKey]:'';if(!raw&&raw!==0)return'';if(typeof raw==='number'){var exD=new Date(Math.round((raw-25569)*86400000));return isNaN(exD)?'':fmtDDMMYYYY(exD);}if(raw instanceof Date)return isNaN(raw)?'':fmtDDMMYYYY(raw);var s=String(raw).trim();if(!s)return'';var d=new Date(s);if(!isNaN(d))return fmtDDMMYYYY(d);return s;})(),
+      rmStatus: k.rmStatusKey ? String(r[k.rmStatusKey]||'').trim() : ''
     };
   }).sort(function(a,b){ return b.days - a.days; });
 
   // Missing list — filter by Commit Date using same fromD/toD as main filter
-  var allowedMiss = ['Job Not Started','PRINTING','COATING','PASTING','PUNCHING','LAMINATION','STRIPPING'];
+  var allowedMiss = ['Job Not Started','PRINTING','COATING','PASTING','PUNCHING','STRIPPING'];
   var missRows = D._rawRows.filter(function(r){
     if(allowedMiss.indexOf(r[statusKey]) < 0) return false;
     var rd = new Date(r[revCommitKey]);
@@ -1117,7 +1687,7 @@ function computeFromRows(rows, k, fromD, toD){
     return rd >= fromD && rd <= toD;
   });
 
-  var missProcesses = ['PRINTING','COATING','PASTING','PUNCHING','LAMINATION','STRIPPING'];
+  var missProcesses = ['PRINTING','COATING','PASTING','PUNCHING','STRIPPING'];
   var missMap={};
   missRows.forEach(function(r){
     var c=String(r[custKey]).trim(); var jc=r[jcnoKey];
@@ -1164,7 +1734,7 @@ function computeFromRows(rows, k, fromD, toD){
   }).filter(Boolean);
 
   // Floor jobs from raw rows — use same fromD/toD as main filter
-  var floorStatuses=['PRINTING','COATING','PASTING','PUNCHING','LAMINATION','STRIPPING'];
+  var floorStatuses=['PRINTING','COATING','PASTING','PUNCHING','STRIPPING'];
   var fjMap={};
   D._rawRows.forEach(function(r){
     var s=r[statusKey]; var jc=r[jcnoKey];
@@ -1232,6 +1802,8 @@ function renderAll(){
   document.getElementById('date-display').textContent = 'Last updated: '+D.lastUpdate+' | '+periodStr;
   var ct = document.getElementById('chart-monthly-title');
   if(ct) ct.textContent = '📅 Monthly Job Count — '+periodShort;
+  document.getElementById('header-title').textContent = COMPANY + ' Job Track Dashboard';
+  document.title = COMPANY + ' Job Track Dashboard';
 
   // Cards
   document.getElementById('ov-total').textContent = fmt(D.totalJobs);
@@ -1250,9 +1822,12 @@ function renderAll(){
   function floorCnt(proc){ var f=D.floorJobs.find(function(x){return x.proc===proc;}); return f?f.cnt:0; }
   document.getElementById('ov-foil').textContent    = fmt(floorCnt('COATING'));
   document.getElementById('ov-frontbal').textContent = fmt(floorCnt('STRIPPING'));
-  document.getElementById('ov-lam').textContent     = fmt(floorCnt('LAMINATION'));
   document.getElementById('ov-vdp').textContent     = fmt(floorCnt('PUNCHING'));
   document.getElementById('ov-vr').textContent      = fmt(floorCnt('PRINTING'));
+  // GP-only cards
+  document.getElementById('ov-fold').textContent    = fmt(floorCnt('Folding(R)'));
+  document.getElementById('ov-outsert').textContent = fmt(floorCnt('Printing(R)'));
+  updateCardVisibility();
 
   // Monthly table
   var mt='', tj=0,tdd=0,tns=0,tc=0;
@@ -1265,7 +1840,7 @@ function renderAll(){
   document.getElementById('ov-date-range').textContent=periodStr;
 
   // Status table
-  var stColors={'DD':'#1a5fa8','Job Not Started':'#8a5200','CANCELLED':'#a02020','PRINTING':'#5c3fa0','COATING':'#16537e','PASTING':'#b5541a','PUNCHING':'#0d7377','LAMINATION':'#1a5fa8','STRIPPING':'#2a6e2a'};
+  var stColors={'DD':'#1a5fa8','Job Not Started':'#8a5200','CANCELLED':'#a02020','PRINTING':'#5c3fa0','COATING':'#16537e','PASTING':'#b5541a','PUNCHING':'#0d7377','STRIPPING':'#2a6e2a'};
   var st='';
   D.statusBreakdown.forEach(function(x){
     var c=stColors[x[0]]||'#888';
@@ -1293,6 +1868,8 @@ function renderAll(){
   populateTimelineDropdown();
   populateMeetingDropdownAndRender();
   renderAllCustomersTimeline();
+  // Overdue tab
+  renderOverdueTab();
 }
 
 // ===================== CHARTS =====================
@@ -1446,8 +2023,8 @@ function renderCharts(){
 }
 
 function renderFloorTable(){
-  var procColors={'PRINTING':'#5c3fa0','COATING':'#16537e','PASTING':'#b5541a','PUNCHING':'#0d7377','LAMINATION':'#1a5fa8','STRIPPING':'#2a6e2a'};
-  var procBgs={'PRINTING':'#eeebfa','COATING':'#ddeefa','PASTING':'#fde9d9','PUNCHING':'#e0f5f5','LAMINATION':'#e8f0fb','STRIPPING':'#e8f5e8'};
+  var procColors={'PRINTING':'#5c3fa0','COATING':'#16537e','PASTING':'#b5541a','PUNCHING':'#0d7377','STRIPPING':'#2a6e2a'};
+  var procBgs={'PRINTING':'#eeebfa','COATING':'#ddeefa','PASTING':'#fde9d9','PUNCHING':'#e0f5f5','STRIPPING':'#e8f5e8'};
   var html='';
   var floorData = D.floorJobs;
   if(!floorData.length){ document.getElementById('floor-table').innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text2)">Upload AIA Track Record to load floor jobs data</td></tr>'; return; }
@@ -1465,9 +2042,9 @@ function renderFloorTable(){
   document.getElementById('floor-date').textContent='As of '+D.lastUpdate;
 
   // Fold table — dynamic from statusBreakdown
-  var foldProcs=['Job Not Started','PRINTING','COATING','PASTING','PUNCHING','LAMINATION','STRIPPING'];
-  var foldColors={'Job Not Started':'#8a5200','PRINTING':'#5c3fa0','COATING':'#16537e','PASTING':'#b5541a','PUNCHING':'#0d7377','LAMINATION':'#1a5fa8','STRIPPING':'#2a6e2a'};
-  var foldBgs={'Job Not Started':'#fdf0d8','PRINTING':'#eeebfa','COATING':'#ddeefa','PASTING':'#fde9d9','PUNCHING':'#e0f5f5','LAMINATION':'#e8f0fb','STRIPPING':'#e8f5e8'};
+  var foldProcs=['Job Not Started','PRINTING','COATING','PASTING','PUNCHING','STRIPPING'];
+  var foldColors={'Job Not Started':'#8a5200','PRINTING':'#5c3fa0','COATING':'#16537e','PASTING':'#b5541a','PUNCHING':'#0d7377','STRIPPING':'#2a6e2a'};
+  var foldBgs={'Job Not Started':'#fdf0d8','PRINTING':'#eeebfa','COATING':'#ddeefa','PASTING':'#fde9d9','PUNCHING':'#e0f5f5','STRIPPING':'#e8f5e8'};
   var stLookup={};
   D.statusBreakdown.forEach(function(x){ stLookup[x[0]]={cnt:x[1],pqty:x[2],cutsh:x[3]}; });
   var foldHtml='', fp2=0,fc2=0,fj2=0;
@@ -1488,7 +2065,9 @@ function renderMissingTables(){
   var total=D.totalJobs;
   // By process
   var mp=''; var tp=0,tc2=0,tj2=0;
-  var procBgs={'Job Not Started':'#fdf0d8','PRINTING':'#eeebfa','COATING':'#ddeefa','PASTING':'#fde9d9','PUNCHING':'#e0f5f5','LAMINATION':'#e8f0fb','STRIPPING':'#e8f5e8'};
+  var procBgs = COMPANY==='GP'
+    ? {'Job Not Started':'#fdf0d8','Printing(R)':'#eeebfa','Folding(R)':'#e0f5f5'}
+    : {'Job Not Started':'#fdf0d8','PRINTING':'#eeebfa','COATING':'#ddeefa','PASTING':'#fde9d9','PUNCHING':'#e0f5f5','STRIPPING':'#e8f5e8'};
   var totMiss=D.missingByProcess.reduce(function(a,x){return a+x.jobs;},0);
   D.missingByProcess.forEach(function(x,i){
     var bg=procBgs[x.status]||(i%2===0?'#ebf4fb':'#fff');
@@ -1518,7 +2097,21 @@ function renderMissingTables(){
 }
 
 function renderMissingCustTable(data){
-  var procs=['PRINTING','COATING','PASTING','PUNCHING','LAMINATION','STRIPPING'];
+  var procs = COMPANY==='GP'
+    ? ['Printing(R)','Folding(R)']
+    : ['PRINTING','COATING','PASTING','PUNCHING','STRIPPING'];
+
+  // Update thead dynamically
+  var thead = document.querySelector('#missing-cust-table')
+    ? document.querySelector('#missing-cust-table').closest('table').querySelector('thead')
+    : null;
+  if(thead){
+    var thHTML='<tr><th>#</th><th>Customer Name</th><th class="num">Pending Qty</th><th class="num">Tot. Cut SH</th><th class="num">Total Jobs</th><th class="num">Not Started</th>';
+    procs.forEach(function(p){ thHTML+='<th class="num">'+p+'</th>'; });
+    thHTML+='</tr>';
+    thead.innerHTML=thHTML;
+  }
+
   var html=''; var tp=0,tc=0,tj=0,tns=0;
   var procTotals={}; procs.forEach(function(p){procTotals[p]=0;});
   data.forEach(function(r,i){
@@ -1573,9 +2166,9 @@ function downloadExcel(){
   var wb = XLSX.utils.book_new();
   var NF = '#,##0';
 
-  var PROC_FG = {PRINTING:'FF5C3FA0',COATING:'FF16537E',PASTING:'FFB5541A',PUNCHING:'FF0D7377',LAMINATION:'FF1A5FA8',STRIPPING:'FF2A6E2A'};
-  var PROC_BG = {PRINTING:'FFEEEBFA',COATING:'FFDDEEFA',PASTING:'FFFDE9D9',PUNCHING:'FFE0F5F5',LAMINATION:'FFE8F0FB',STRIPPING:'FFE8F5E8'};
-  var MISS_BG = {'Job Not Started':'FFFDF0D8',PRINTING:'FFEEEBFA',COATING:'FFDDEEFA',PASTING:'FFFDE9D9',PUNCHING:'FFE0F5F5',LAMINATION:'FFE8F0FB',STRIPPING:'FFE8F5E8'};
+  var PROC_FG = {PRINTING:'FF5C3FA0',COATING:'FF16537E',PASTING:'FFB5541A',PUNCHING:'FF0D7377',STRIPPING:'FF2A6E2A'};
+  var PROC_BG = {PRINTING:'FFEEEBFA',COATING:'FFDDEEFA',PASTING:'FFFDE9D9',PUNCHING:'FFE0F5F5',STRIPPING:'FFE8F5E8'};
+  var MISS_BG = {'Job Not Started':'FFFDF0D8',PRINTING:'FFEEEBFA',COATING:'FFDDEEFA',PASTING:'FFFDE9D9',PUNCHING:'FFE0F5F5',STRIPPING:'FFE8F5E8'};
   var C = {
     mainTitle:'FF1A1A2E', t1:'FF0F3460', t2:'FF16537E', t3:'FF8B1A1A',
     white:'FFFFFFFF', ltBlue:'FFEBF4FB', ltGrn:'FFF0F7F0',
@@ -1621,7 +2214,7 @@ function downloadExcel(){
 
   // --- Pre-calculate row counts so we know how tall the grid must be ---
   var floorRowCount = D.floorJobs.reduce(function(a,f){return a+1+(f.subs||[]).length;},0)+1; // +1 grand total
-  var foldOrder = ['Job Not Started','PRINTING','COATING','PASTING','PUNCHING','LAMINATION','STRIPPING'];
+  var foldOrder = ['Job Not Started','PRINTING','COATING','PASTING','PUNCHING','STRIPPING'];
   var stMap={};
   D.statusBreakdown.forEach(function(x){stMap[x[0]]={cnt:x[1],pqty:x[2]||0,cutsh:x[3]||0};});
   var foldRows = foldOrder.filter(function(p){return stMap[p]&&stMap[p].cnt;});
@@ -1635,12 +2228,12 @@ function downloadExcel(){
 
   var topSectionRows = Math.max(leftHeight, rightHeight) + 1; // +1 gap
 
-  var custProcs = ['PRINTING','COATING','PASTING','PUNCHING','LAMINATION','STRIPPING'];
+  var custProcs = ['PRINTING','COATING','PASTING','PUNCHING','STRIPPING'];
   var custHdr = ['#','Customer Name','Pending Qty','Tot. Cut SH','Total Jobs','Not Started'].concat(custProcs);
   // Customer section: title(1) + hdr(1) + data + grandtotal(1)
   var custSectionRows = 2 + D.missingCust.length + 1;
 
-  var totalRows = topSectionRows + custSectionRows + 4;
+  var totalRows = topSectionRows + 10 + custSectionRows + 4;
 
   // Build empty grid
   var grid=[], sg=[];
@@ -1741,10 +2334,67 @@ function downloadExcel(){
   set(r3d,T2+3,m3j,csMed('FF8B1A1A',C.grandRed,true,9,'right',NF));
   set(r3d,T2+4,'100%',csMed('FF8B1A1A',C.grandRed,true,9,'center'));
 
+
+  var dSum={preponed:0,ontime:0,delayed:0,pending:0,prependQty:0,ontimeQty:0,delayedQty:0,pendingQty:0};
   // ============================================================
-  // BOTTOM: MISSING BY CUSTOMER (col 0, full width, below both)
+  // DISPATCH SUMMARY TABLE — right side col T2, below missing table
   // ============================================================
-  var CUST_START = Math.max(floorLastRow, r3d) + 2;
+  var DISP_START_ROW = r3d + 2;
+  var DISP_COL = T2; // col 6
+
+  (function(){
+    var k2=D._keys, disp2=k2.dispatchDateKey, commit2=k2.revCommitKey;
+    var fFrom=D._filterFrom?new Date(D._filterFrom):new Date('2000-01-01');
+    var fTo=D._filterTo?new Date(D._filterTo):new Date();
+    fFrom.setHours(0,0,0,0); fTo.setHours(23,59,59,999);
+    var seen2={};
+    D._rawRows.forEach(function(r){
+      var jcno=String(r[k2.jcnoKey]).trim();
+      if(seen2[jcno]) return;
+      var cd=new Date(r[commit2]);
+      if(isNaN(cd)||cd<fFrom||cd>fTo) return;
+      seen2[jcno]=1;
+      var pqty=Math.max(0,parseFloat(r[k2.pendKey])||0);
+      var dv=r[disp2];
+      if(!dv||dv===''){dSum.pending++;dSum.pendingQty+=pqty;return;}
+      var dd=new Date(dv);
+      if(isNaN(dd)){dSum.pending++;dSum.pendingQty+=pqty;return;}
+      var ddD=new Date(dd.getFullYear(),dd.getMonth(),dd.getDate());
+      var cdD=new Date(cd.getFullYear(),cd.getMonth(),cd.getDate());
+      var diff=Math.floor((ddD-cdD)/86400000);
+      if(diff<0){dSum.preponed++;dSum.prependQty+=pqty;}
+      else if(diff<=1){dSum.ontime++;dSum.ontimeQty+=pqty;}
+      else{dSum.delayed++;dSum.delayedQty+=pqty;}
+    });
+  })();
+
+  set(DISP_START_ROW,   DISP_COL,   'DISPATCH SUMMARY  |  '+xlDateRange, cs(C.white,'FF0D4A6E',true,11,'center'));
+  set(DISP_START_ROW,   DISP_COL+1, '', cs(C.white,'FF0D4A6E',false,10,'center'));
+  set(DISP_START_ROW,   DISP_COL+2, '', cs(C.white,'FF0D4A6E',false,10,'center'));
+  set(DISP_START_ROW+1, DISP_COL,   'Dispatch Status', cs(C.white,'FF16537E',true,10,'center'));
+  set(DISP_START_ROW+1, DISP_COL+1, 'No. of Jobs',     cs(C.white,'FF16537E',true,10,'center'));
+  set(DISP_START_ROW+1, DISP_COL+2, 'Pending Qty',     cs(C.white,'FF16537E',true,10,'center'));
+  var dsRows=[
+    ['Preponed (Early)', dSum.preponed, Math.round(dSum.prependQty), 'FF1A5FA8','FFE8F0FB'],
+    ['On Time (+/-1day)',dSum.ontime,   Math.round(dSum.ontimeQty),  'FF2A6E2A','FFE8F5E8'],
+    ['Delayed (>1 day)', dSum.delayed,  Math.round(dSum.delayedQty), 'FFA02020','FFFAEAEA'],
+    ['Pending (No Desp)',dSum.pending,  Math.round(dSum.pendingQty), 'FF8A5200','FFFDF0D8']
+  ];
+  var totalJobs2=dSum.preponed+dSum.ontime+dSum.delayed+dSum.pending;
+  var totalQty2=Math.round(dSum.prependQty+dSum.ontimeQty+dSum.delayedQty+dSum.pendingQty);
+  dsRows.forEach(function(dr,i){
+    set(DISP_START_ROW+2+i,DISP_COL,  dr[0],cs(dr[3],dr[4],true, 10,'left'));
+    set(DISP_START_ROW+2+i,DISP_COL+1,dr[1],cs(dr[3],dr[4],true, 10,'center'));
+    set(DISP_START_ROW+2+i,DISP_COL+2,dr[2],cs(dr[3],dr[4],false,10,'right',NF));
+  });
+  set(DISP_START_ROW+6,DISP_COL,  'TOTAL',    csMed(C.navy,C.grandBlu,true,10,'left'));
+  set(DISP_START_ROW+6,DISP_COL+1,totalJobs2, csMed(C.navy,C.grandBlu,true,10,'center'));
+  set(DISP_START_ROW+6,DISP_COL+2,totalQty2,  csMed(C.navy,C.grandBlu,true,10,'right',NF));
+
+  // ============================================================
+  // BOTTOM: MISSING BY CUSTOMER (col 0, full width, below top section)
+  // ============================================================
+  var CUST_START = Math.max(floorLastRow, DISP_START_ROW+7) + 2;
 
   set(CUST_START,0,'MISSING LIST — ALL MISSING JOBS BY CUSTOMER — '+xlDateRange, cs(C.white,lemonTitle,true,11,'center'));
   for(var ci4=1;ci4<custHdr.length;ci4++) set(CUST_START,ci4,'',cs(C.white,lemonTitle,false,11,'center'));
@@ -1797,6 +2447,7 @@ function downloadExcel(){
     {s:{r:B,c:T1},e:{r:B,c:T1+4}},                  // Floor Jobs title
     {s:{r:B,c:T2},e:{r:B,c:T2+3}},                  // Fold title
     {s:{r:r3,c:T2},e:{r:r3,c:T2+4}},                // Missing Process title
+    {s:{r:DISP_START_ROW,c:DISP_COL},e:{r:DISP_START_ROW,c:DISP_COL+2}}, // Dispatch title
     {s:{r:CUST_START,c:0},e:{r:CUST_START,c:custHdr.length-1}} // Cust title full width
   ];
 
@@ -2008,7 +2659,33 @@ function renderAgingTab(){
   document.getElementById('age-30plus').textContent=fmt(b3);
   document.getElementById('aging-info').textContent=D.agingRows.length+' pending jobs total';
 
-  // Chart
+  // Update thead dynamically based on company
+  var aThead = document.getElementById('aging-thead');
+  if(aThead){
+    if(COMPANY === 'GP'){
+      aThead.innerHTML='<tr>'
+        +'<th>#</th><th>JCNO</th><th>Job Name</th><th>Customer</th><th>Status</th>'
+        +'<th class="num">Pending Qty</th><th class="num">Cut SH</th>'
+        +'<th class="num">Commit Date</th><th class="num">Days Pending</th>'
+        +'<th class="num" style="background:#fef9e7;color:#7d6608">📄 PO Date</th>'
+        +'<th style="background:#eaf4fb;color:#1a5f7a">🔩 RM Status</th>'
+        +'<th class="num" style="background:#d0e8f5;color:#16537e">📂 Fold Date</th>'
+        +'<th>Bucket</th>'
+        +'</tr>';
+    } else {
+      aThead.innerHTML='<tr>'
+        +'<th>#</th><th>JCNO</th><th>Job Name</th><th>Customer</th><th>Status</th>'
+        +'<th class="num">Pending Qty</th><th class="num">Cut SH</th>'
+        +'<th class="num">Commit Date</th><th class="num">Days Pending</th>'
+        +'<th class="num" style="background:#d0e8f5;color:#16537e">🖨️ Print Date</th>'
+        +'<th class="num" style="background:#e8e0f5;color:#5c3fa0">👊 Punch Date</th>'
+        +'<th class="num" style="background:#fde9d9;color:#b5541a">📋 Paste Date</th>'
+        +'<th class="num" style="background:#fef9e7;color:#7d6608">📄 PO Date</th>'
+        +'<th style="background:#eaf4fb;color:#1a5f7a">🔩 RM Status</th>'
+        +'<th>Bucket</th>'
+        +'</tr>';
+    }
+  }
   destroyChart('aging');
   var aCtx=document.getElementById('chart-aging');
   if(aCtx){
@@ -2066,9 +2743,6 @@ function renderAgingTable(rows){
     var fg=bucketColors[r.bucket]||'#333';
     var dStr=r.revDate?fmtDate(r.revDate):'—';
     var jcno=String(r.jcno).trim();
-    var printDate = D.schedPrinting[jcno]  || null;
-    var punchDate = D.schedPunching[jcno]  || null;
-    var pasteDate = D.schedPasting[jcno]   || null;
     html+='<tr style="background:'+bg+'">'
       +'<td>'+(i+1)+'</td>'
       +'<td style="font-weight:700;color:#1a5fa8">'+r.jcno+'</td>'
@@ -2078,14 +2752,27 @@ function renderAgingTable(rows){
       +'<td class="num">'+fmt(r.pqty)+'</td>'
       +'<td class="num">'+fmt(r.cutsh)+'</td>'
       +'<td class="num">'+dStr+'</td>'
-      +'<td class="num" style="font-weight:700;color:'+fg+'">'+r.days+'</td>'
-      +schedCell(printDate,'#d0e8f5')
-      +schedCell(punchDate,'#e8e0f5')
-      +schedCell(pasteDate,'#fde9d9')
-      +'<td><span class="badge" style="background:'+bg+';color:'+fg+'">'+r.bucket+' days</span></td>'
+      +'<td class="num" style="font-weight:700;color:'+fg+'">'+r.days+'</td>';
+    if(COMPANY === 'GP'){
+      var foldDate = (D.schedFolding && D.schedFolding[jcno.trim()]) || null;
+      html+='<td class="num" style="background:#fef9e7;color:#7d6608;font-size:11px">'+(r.poDate||'—')+'</td>'
+        +'<td style="background:#eaf4fb;color:#1a5f7a;font-size:11px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(r.rmStatus||'')+'">'+(r.rmStatus||'—')+'</td>'
+        +schedCell(foldDate,'#d0e8f5');
+    } else {
+      var printDate = D.schedPrinting[jcno] || null;
+      var punchDate = D.schedPunching[jcno] || null;
+      var pasteDate = D.schedPasting[jcno]  || null;
+      html+=schedCell(printDate,'#d0e8f5')
+        +schedCell(punchDate,'#e8e0f5')
+        +schedCell(pasteDate,'#fde9d9')
+        +'<td class="num" style="background:#fef9e7;color:#7d6608;font-size:11px">'+(r.poDate||'—')+'</td>'
+        +'<td style="background:#eaf4fb;color:#1a5f7a;font-size:11px;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(r.rmStatus||'')+'">'+(r.rmStatus||'—')+'</td>';
+    }
+    html+='<td><span class="badge" style="background:'+bg+';color:'+fg+'">'+r.bucket+' days</span></td>'
       +'</tr>';
   });
-  document.getElementById('aging-table').innerHTML=html||'<tr><td colspan="13" style="text-align:center;padding:20px;color:var(--text2)">No pending jobs in selected range</td></tr>';
+  var emptyColspan = (COMPANY === 'GP') ? 13 : 13;
+  document.getElementById('aging-table').innerHTML=html||'<tr><td colspan="'+emptyColspan+'" style="text-align:center;padding:20px;color:var(--text2)">No pending jobs in selected range</td></tr>';
 }
 
 // ===================== DRILL-DOWN MODAL =====================
@@ -2118,7 +2805,7 @@ function openDrillModal(custName){
   if(missC && missC.proc){
     body+='<div style="font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Missing by Process</div>';
     body+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">';
-    var procs=['PRINTING','COATING','PASTING','PUNCHING','LAMINATION','STRIPPING'];
+    var procs=['PRINTING','COATING','PASTING','PUNCHING','STRIPPING'];
     procs.forEach(function(p){
       var v=(missC.proc&&missC.proc[p])||0;
       if(v>0) body+='<span class="badge b-floor" style="font-size:11px;padding:3px 10px">'+p+': '+v+'</span>';
@@ -2332,7 +3019,7 @@ function getMeetingData(custFilter){
   var SC_STATUS      = 'SHORT CLOSE';
   var SD_STATUS      = 'SHORT DISPATCH';
   var CANCEL_STATUS  = 'CANCELLED';
-  var INPROCESS_LIST = ['PRINTING','COATING','PASTING','PUNCHING','LAMINATION','STRIPPING','Job Not Started'];
+  var INPROCESS_LIST = ['PRINTING','COATING','PASTING','PUNCHING','STRIPPING','Job Not Started'];
   var NS_STATUS      = 'Job Not Started';
 
   // Active date filter — same range jo Overview/main tab madhe select aahe
@@ -2622,6 +3309,35 @@ function renderMeetingSummary(){
 
   if(!detailHtml) detailHtml = '<div class="empty"><p>No in-process or cancelled jobs found</p></div>';
   document.getElementById('meeting-summary-wrap').innerHTML = detailHtml;
+
+  // ===================== HEALTH PIE CHARTS =====================
+  (function(){
+    var chartsWrap = document.getElementById('meeting-charts-wrap');
+    if(!chartsWrap) return;
+    chartsWrap.style.display='block';
+    var activeTotal = totals.total - totals.cancel;
+    document.getElementById('meeting-chart-subtitle').textContent=(custFilter==='ALL'?'All Customers':custFilter)+'  ·  '+totals.total+' jobs total  ·  '+activeTotal+' active';
+    document.getElementById('meeting-pie-total-num').textContent=totals.total;
+    document.getElementById('meeting-pie-active-num').textContent=activeTotal;
+
+    var delayLabels=['⬆ Preponed','✅ On Track','👍 Okay','⚠️ Mid Delay','🔶 Concern','🔴 Serious','🚨 Action Req','❌ Cancelled'];
+    var delayValues=[totals.preponed,totals.ontrack,totals.okay,totals.mid,totals.concern,totals.serious,totals.action,totals.cancel];
+    var delayColors=['#1a5fa8cc','#2a6e2acc','#c47a00cc','#856404cc','#b5541acc','#a02020cc','#8b0000cc','#999999cc'];
+    var dL=[],dV=[],dC=[];
+    for(var di=0;di<delayLabels.length;di++){if(delayValues[di]>0){dL.push(delayLabels[di]);dV.push(delayValues[di]);dC.push(delayColors[di]);}}
+    if(_charts['mtg-delay'])_charts['mtg-delay'].destroy();
+    var dCtx=document.getElementById('meeting-pie-delay');
+    if(dCtx&&dV.length){_charts['mtg-delay']=new Chart(dCtx,{type:'doughnut',data:{labels:dL,datasets:[{data:dV,backgroundColor:dC,borderWidth:2,borderColor:'#fff',hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:true,cutout:'60%',plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:12,padding:8}},tooltip:{callbacks:{label:function(ctx){var tot=ctx.dataset.data.reduce(function(a,b){return a+b;},0);return ctx.label+': '+ctx.raw+' ('+Math.round(ctx.raw/tot*100)+'%)';}}}}}});}
+
+    var stLabels=['✅ DD','📦 S.Dispatch','🔒 S.Close','⚙️ In Process','❌ Cancelled','🚫 Not Started'];
+    var stValues=[totals.dd,totals.sd,totals.sc,totals.inProc,totals.cancel,data.reduce(function(a,c){return a+(c.nsCount||0);},0)];
+    var stColors=['#2a6e2acc','#16537ecc','#5c3fa0cc','#555555cc','#a02020cc','#8a5200cc'];
+    var sL=[],sV=[],sC=[];
+    for(var si=0;si<stLabels.length;si++){if(stValues[si]>0){sL.push(stLabels[si]);sV.push(stValues[si]);sC.push(stColors[si]);}}
+    if(_charts['mtg-status'])_charts['mtg-status'].destroy();
+    var sCtx=document.getElementById('meeting-pie-status');
+    if(sCtx&&sV.length){_charts['mtg-status']=new Chart(sCtx,{type:'doughnut',data:{labels:sL,datasets:[{data:sV,backgroundColor:sC,borderWidth:2,borderColor:'#fff',hoverOffset:8}]},options:{responsive:true,maintainAspectRatio:true,cutout:'60%',plugins:{legend:{position:'right',labels:{font:{size:10},boxWidth:12,padding:8}}}}});}
+  })();
 }
 
 // ===================== DOWNLOAD MEETING EXCEL =====================
@@ -2969,19 +3685,253 @@ function downloadMeetingExcel(){
 }
 
 
+// ===================== MISSED REPORT =====================
+var _missRows = [];
+
+function renderMissReport(){
+  if(!D.loaded){
+    document.getElementById('missrpt-tbody').innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--text2);padding:30px">⚠️ Pehle Track Record upload karo</td></tr>';
+    return;
+  }
+  var dateVal=document.getElementById('missrpt-date').value;
+  var procFilter=document.getElementById('missrpt-proc').value;
+  if(!dateVal){ return; }
+  var selDate=new Date(dateVal); selDate.setHours(0,0,0,0);
+  var rows=[];
+  var seen={};
+
+  function addRows(schedMap, procName){
+    Object.keys(schedMap).forEach(function(jcno){
+      var dStr=schedMap[jcno];
+      if(!dStr) return;
+      var parts=dStr.split('/');
+      if(parts.length<3) return;
+      var d=new Date(+parts[2],+parts[1]-1,+parts[0]);d.setHours(0,0,0,0);
+      if(d.getTime()!==selDate.getTime()) return;
+      if(procFilter!=='ALL'&&procFilter!==procName.toLowerCase()) return;
+      var key=jcno+'|'+procName;
+      if(seen[key]) return; seen[key]=1;
+      var ag=D.agingRows.find(function(r){return String(r.jcno).trim()===String(jcno).trim();});
+      var raw=D._rawRows.find(function(r){return String(r[D._keys.jcnoKey]).trim()===String(jcno).trim();});
+      rows.push({
+        jcno:jcno,
+        jobName:(ag&&ag.jobName)||(raw&&D._keys.jobNameKey&&String(raw[D._keys.jobNameKey]||'').trim())||'',
+        cust:(ag&&ag.cust)||(raw&&String(raw[D._keys.custKey]||'').trim())||'—',
+        proc:procName,schedDate:dStr,
+        revCommit:ag?fmtDate(ag.revDate):(raw&&D._keys.revCommitKey?fmtDate(new Date(raw[D._keys.revCommitKey])):'—'),
+        missed:false,reason:'',remark:''
+      });
+    });
+  }
+
+  if(COMPANY==='GP'){
+    addRows(D.schedFolding||{},'Folding');
+  } else {
+    addRows(D.schedPrinting,'Printing');
+    addRows(D.schedPunching,'Punching');
+    addRows(D.schedPasting,'Pasting');
+  }
+
+  rows.sort(function(a,b){return a.cust.localeCompare(b.cust)||String(a.jcno).localeCompare(String(b.jcno));});
+  _missRows=rows;
+
+  document.getElementById('mr-total').textContent=rows.length;
+  document.getElementById('mr-missed').textContent=rows.filter(function(r){return r.missed;}).length;
+  document.getElementById('mr-done').textContent='—';
+  document.getElementById('mr-pending').textContent=rows.length;
+  document.getElementById('missrpt-info').textContent=rows.length+' jobs scheduled on '+dateVal;
+  document.getElementById('mr-check-all').checked=false;
+  renderMissTable();
+}
+
+var MISS_REASONS=['','Machine Breakdown','Material Not Ready','Operator Absent','Job Cancelled','Previous Process Pending','Rush Priority Shifted','Power Failure','Low Capacity','Customer Hold','Other'];
+
+function renderMissTable(){
+  var tbody=document.getElementById('missrpt-tbody');
+  if(!_missRows.length){
+    tbody.innerHTML='<tr><td colspan="10" style="text-align:center;color:var(--text2);padding:30px">Ya date la koni scheduled job nahit</td></tr>';
+    document.getElementById('mr-total').textContent='0';
+    return;
+  }
+  var procColors={Printing:'#d0e8f5',Punching:'#e8e0f5',Pasting:'#fde9d9',Folding:'#d0f5e8'};
+  var procFG={Printing:'#16537e',Punching:'#5c3fa0',Pasting:'#b5541a',Folding:'#0d7377'};
+  var html='';
+  _missRows.forEach(function(r,i){
+    var rowCls=r.missed?'mr-row-missed':'';
+    var reasonOpts=MISS_REASONS.map(function(rs){return'<option value="'+rs+'"'+(r.reason===rs?' selected':'')+'>'+( rs||'— Reason select karo —')+'</option>';}).join('');
+    var pc=procColors[r.proc]||'#eee',pf=procFG[r.proc]||'#333';
+    html+='<tr class="'+rowCls+'" id="mr-row-'+i+'">'
+      +'<td style="text-align:center"><input type="checkbox" class="mr-checkbox"'+(r.missed?' checked':'')+' onchange="mrToggleRow('+i+',this.checked)"></td>'
+      +'<td style="font-weight:700;color:#1a5fa8">'+r.jcno+'</td>'
+      +'<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(r.jobName||'')+'">'+( r.jobName||'—' )+'</td>'
+      +'<td>'+r.cust+'</td>'
+      +'<td><span style="background:'+pc+';color:'+pf+';padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700">'+r.proc+'</span></td>'
+      +'<td class="num">'+r.schedDate+'</td>'
+      +'<td class="num">'+r.revCommit+'</td>'
+      +'<td><select class="mr-reason-sel" onchange="mrSetReason('+i+',this.value)"'+(r.missed?'':' disabled')+'>'+reasonOpts+'</select></td>'
+      +'<td><input type="text" class="mr-remark-inp" placeholder="Additional remark..." value="'+(r.remark||'')+'" onchange="mrSetRemark('+i+',this.value)"'+(r.missed?'':' disabled')+'></td>'
+      +'<td style="text-align:center"><span class="mr-status-badge" style="background:'+(r.missed?'#faeaea':'#e8f5e8')+';color:'+(r.missed?'#a02020':'#2a6e2a')+'">'+(r.missed?'❌ Missed':'✅ OK')+'</span></td>'
+      +'</tr>';
+  });
+  tbody.innerHTML=html;
+  updateMrSummary();
+}
+
+function mrToggleAll(checked){_missRows.forEach(function(r,i){r.missed=checked;if(!checked){r.reason='';r.remark='';}}); renderMissTable(); document.getElementById('mr-check-all').checked=checked;}
+function mrToggleRow(i,checked){_missRows[i].missed=checked;if(!checked){_missRows[i].reason='';_missRows[i].remark='';} var tr=document.getElementById('mr-row-'+i); if(tr){tr.className=checked?'mr-row-missed':'';} var sel=tr?tr.querySelector('.mr-reason-sel'):null; var inp=tr?tr.querySelector('.mr-remark-inp'):null; if(sel)sel.disabled=!checked; if(inp)inp.disabled=!checked; var badge=tr?tr.querySelector('.mr-status-badge'):null; if(badge){badge.style.background=checked?'#faeaea':'#e8f5e8';badge.style.color=checked?'#a02020':'#2a6e2a';badge.textContent=checked?'❌ Missed':'✅ OK';} updateMrSummary();}
+function mrSetReason(i,v){_missRows[i].reason=v;}
+function mrSetRemark(i,v){_missRows[i].remark=v;}
+function updateMrSummary(){
+  var missed=_missRows.filter(function(r){return r.missed;}).length;
+  document.getElementById('mr-missed').textContent=missed;
+  document.getElementById('mr-pending').textContent=_missRows.length-missed;
+}
+
+function saveMissReportEntries(){
+  var toSave=_missRows.filter(function(r){return r.missed;});
+  if(!toSave.length){alert('Koi missed rows select nahi kelya (checkbox tick karo)');return;}
+  var dateVal=document.getElementById('missrpt-date').value;
+  var now=new Date();
+  var newEntries=toSave.map(function(r){
+    return{date:dateVal,jcno:r.jcno,jobName:r.jobName,cust:r.cust,proc:r.proc,schedDate:r.schedDate,reason:r.reason,remark:r.remark,savedAt:fmtDate(now)};
+  });
+  D.missedEntries=(D.missedEntries||[]).concat(newEntries);
+  try{localStorage.setItem('erp_missed_entries_'+COMPANY,JSON.stringify(D.missedEntries));}catch(e){}
+  alert('✓ '+newEntries.length+' entries saved!');
+  renderMissHistoryTable();
+}
+
+function renderMissHistoryTable(){
+  var entries=D.missedEntries||[];
+  document.getElementById('mr-history-count').textContent=entries.length+' saved entries';
+  if(!entries.length){document.getElementById('mr-history-tbody').innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text2);padding:20px">No saved entries yet</td></tr>';return;}
+  var html='';
+  entries.slice().reverse().forEach(function(e,i){
+    var ri=entries.length-1-i;
+    html+='<tr><td>'+e.date+'</td><td style="font-weight:700;color:#1a5fa8">'+e.jcno+'</td><td>'+( e.jobName||'—' )+'</td><td>'+e.cust+'</td><td>'+e.proc+'</td><td>'+(e.reason||'—')+'</td><td>'+(e.remark||'—')+'</td><td>'+e.savedAt+'</td><td><button onclick="deleteMissEntry('+ri+')" style="background:none;border:none;color:#a02020;cursor:pointer;font-size:11px">🗑</button></td></tr>';
+  });
+  document.getElementById('mr-history-tbody').innerHTML=html;
+}
+
+function deleteMissEntry(i){
+  D.missedEntries.splice(i,1);
+  try{localStorage.setItem('erp_missed_entries_'+COMPANY,JSON.stringify(D.missedEntries));}catch(e){}
+  renderMissHistoryTable();
+}
+
+function downloadMissReportExcel(type){
+  if(!D.missedEntries||!D.missedEntries.length){alert('No saved entries to download');return;}
+  var wb=XLSX.utils.book_new();
+  var today=new Date();
+  var hdrs=['Date','JCNO','Job Name','Customer','Process','Sched. Date','Reason','Remark','Saved At'];
+  var rows=[hdrs].concat(D.missedEntries.map(function(e){return[e.date,e.jcno,e.jobName||'',e.cust,e.proc,e.schedDate,e.reason||'',e.remark||'',e.savedAt];}));
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:12},{wch:14},{wch:30},{wch:24},{wch:12},{wch:12},{wch:22},{wch:28},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws,'Missed Report');
+  XLSX.writeFile(wb,COMPANY+'_Missed_Report_'+fmtDDMMYYYY(today).replace(/\//g,'-')+'.xlsx');
+}
+
+// ===================== OVERDUE JOBS =====================
+function renderOverdueTab(){
+  if(!D.loaded){return;}
+  var today=new Date();today.setHours(0,0,0,0);
+  var rows=[];
+  var seen={};
+  D._rawRows.forEach(function(r){
+    var jc=String(r[D._keys.jcnoKey]||'').trim();
+    if(!jc||seen[jc])return;
+    var rd=new Date(r[D._keys.revCommitKey]);
+    if(isNaN(rd)) return;
+    if(rd>=today) return;
+    var daysOD=Math.floor((today-rd)/86400000);
+    var bucket=daysOD<=7?'1-7':daysOD<=15?'8-15':daysOD<=30?'16-30':'30+';
+    var status=r[D._keys.statusKey]||'';
+    if(status==='DD'||status==='CANCELLED'||status==='SHORT CLOSE'||status==='SHORT DISPATCH') return;
+    seen[jc]=1;
+    rows.push({jcno:jc,jobName:D._keys.jobNameKey?String(r[D._keys.jobNameKey]||'').trim():'',cust:String(r[D._keys.custKey]||'').trim(),status:status,pqty:parseFloat(r[D._keys.pendKey])||0,revDate:rd,daysOD:daysOD,bucket:bucket});
+  });
+  rows.sort(function(a,b){return b.daysOD-a.daysOD;});
+  D._overdueRows=rows;
+
+  var b1=0,b2=0,b3=0,b4=0;
+  rows.forEach(function(r){if(r.bucket==='1-7')b1++;else if(r.bucket==='8-15')b2++;else if(r.bucket==='16-30')b3++;else b4++;});
+  document.getElementById('od-total').textContent=rows.length;
+  document.getElementById('od-1-7').textContent=b1;
+  document.getElementById('od-8-15').textContent=b2;
+  document.getElementById('od-16-30').textContent=b3;
+  document.getElementById('od-30plus').textContent=b4;
+  var custs={}; rows.forEach(function(r){custs[r.cust]=1;}); document.getElementById('od-custs').textContent=Object.keys(custs).length;
+  document.getElementById('od-info').textContent=rows.length+' overdue jobs';
+
+  // Chart
+  destroyChart('overdue');
+  var odCtx=document.getElementById('chart-overdue');
+  if(odCtx&&rows.length){
+    var custMap2={};
+    rows.forEach(function(r){if(!custMap2[r.cust])custMap2[r.cust]={'1-7':0,'8-15':0,'16-30':0,'30+':0};custMap2[r.cust][r.bucket]++;});
+    var topCusts=Object.entries(custMap2).sort(function(a,b){return(b[1]['1-7']+b[1]['8-15']+b[1]['16-30']+b[1]['30+'])-(a[1]['1-7']+a[1]['8-15']+a[1]['16-30']+a[1]['30+']);}).slice(0,10);
+    _charts['overdue']=new Chart(odCtx,{type:'bar',data:{labels:topCusts.map(function(c){return c[0].length>20?c[0].substring(0,20)+'…':c[0];}),datasets:[{label:'1-7d',data:topCusts.map(function(c){return c[1]['1-7'];}),backgroundColor:'#c47a00cc',borderRadius:4},{label:'8-15d',data:topCusts.map(function(c){return c[1]['8-15'];}),backgroundColor:'#b5541acc',borderRadius:4},{label:'16-30d',data:topCusts.map(function(c){return c[1]['16-30'];}),backgroundColor:'#a02020cc',borderRadius:4},{label:'30+d',data:topCusts.map(function(c){return c[1]['30+'];}),backgroundColor:'#6b0000cc',borderRadius:4}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'top',labels:{font:{size:11},boxWidth:12}}},scales:{x:{stacked:true,ticks:{font:{size:10}},grid:{color:'#f0efe9'}},y:{stacked:true,ticks:{font:{size:10}},grid:{display:false}}}}});
+  }
+  renderOverdueTable(rows);
+}
+
+function renderOverdueTable(rows){
+  var bFG={'1-7':'#b5541a','8-15':'#a02020','16-30':'#8b0000','30+':'#4a0000'};
+  var bBG={'1-7':'#fff3e0','8-15':'#faeaea','16-30':'#f5d0d0','30+':'#ffe0e0'};
+  var html='';
+  rows.forEach(function(r,n){
+    var fg=bFG[r.bucket]||'#333',bg=bBG[r.bucket]||'#fff';
+    html+='<tr style="background:'+bg+'">'
+      +'<td>'+(n+1)+'</td>'
+      +'<td style="font-weight:700;color:#1a5fa8">'+r.jcno+'</td>'
+      +'<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(r.jobName||'')+'">'+( r.jobName||'—' )+'</td>'
+      +'<td>'+r.cust+'</td>'
+      +'<td><span class="badge" style="background:'+bg+';color:'+fg+'">'+r.status+'</span></td>'
+      +'<td class="num">'+fmt(r.pqty)+'</td>'
+      +'<td class="num" style="color:'+fg+'">'+fmtDDMMYYYY(r.revDate)+'</td>'
+      +'<td class="num" style="font-weight:700;color:'+fg+';font-size:13px">'+r.daysOD+'</td>'
+      +'<td><span class="badge" style="background:'+bg+';color:'+fg+'">'+r.bucket+' days</span></td>'
+      +'</tr>';
+  });
+  document.getElementById('od-table').innerHTML=html||'<tr><td colspan="9" style="text-align:center;color:var(--text2);padding:30px">🎉 Koi overdue jobs nahit!</td></tr>';
+}
+
+function filterOverdueTable(){
+  var q=(document.getElementById('od-search').value||'').toLowerCase();
+  if(!D._overdueRows) return;
+  var filtered=q?D._overdueRows.filter(function(r){return String(r.jcno).toLowerCase().includes(q)||r.cust.toLowerCase().includes(q)||(r.jobName||'').toLowerCase().includes(q);}):D._overdueRows;
+  renderOverdueTable(filtered);
+}
+
+function downloadOverdueExcel(){
+  if(!D._overdueRows||!D._overdueRows.length){alert('Koi overdue jobs nahit!');return;}
+  var seen={};
+  var rows=D._overdueRows.filter(function(r){if(seen[r.jcno])return false;seen[r.jcno]=1;return true;});
+  var wb=XLSX.utils.book_new();
+  var today=new Date();
+  var hdrs=['#','JCNO','Job Name','Customer','Status','Pending Qty','Commit Date','Days Overdue','Bucket'];
+  var grid=[hdrs].concat(rows.map(function(r,i){return[i+1,r.jcno,r.jobName||'',r.cust,r.status,Math.round(r.pqty),fmtDDMMYYYY(r.revDate),r.daysOD,r.bucket+' days'];}));
+  var ws=XLSX.utils.aoa_to_sheet(grid);
+  ws['!cols']=[{wch:4},{wch:14},{wch:36},{wch:28},{wch:16},{wch:12},{wch:16},{wch:13},{wch:14}];
+  ws['!freeze']={xSplit:0,ySplit:1};
+  ws['!autofilter']={ref:'A1:I'+(grid.length)};
+  XLSX.utils.book_append_sheet(wb,ws,'Overdue Jobs');
+  XLSX.writeFile(wb,COMPANY+'_Overdue_Jobs_'+fmtDDMMYYYY(today).replace(/\//g,'-')+'.xlsx');
+}
+
 // Init
 window.onload=function(){
-  document.getElementById('date-display').textContent='Upload AIA Track Record to load dashboard';
+  document.getElementById('date-display').textContent='Upload '+COMPANY+' Track Record to load dashboard';
+  var td=new Date();
+  var mm=('0'+(td.getMonth()+1)).slice(-2);
+  var dd2=('0'+td.getDate()).slice(-2);
+  document.getElementById('missrpt-date').value=td.getFullYear()+'-'+mm+'-'+dd2;
+  try{
+    var saved=localStorage.getItem('erp_missed_entries_'+COMPANY);
+    if(saved) D.missedEntries=JSON.parse(saved);
+  }catch(e){D.missedEntries=[];}
+  renderMissHistoryTable();
 };
-</script>
-<script>
-if('serviceWorker' in navigator){
-  window.addEventListener('load', function(){
-    navigator.serviceWorker.register('sw.js')
-      .then(function(reg){ console.log('SW registered:', reg.scope); })
-      .catch(function(err){ console.log('SW error:', err); });
-  });
-}
 </script>
 </body>
 </html>
