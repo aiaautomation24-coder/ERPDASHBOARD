@@ -304,6 +304,7 @@ tr.clickable-row{cursor:pointer} tr.clickable-row:hover td{background:#e8f0fb!im
   <div class="tab" onclick="showTab('meeting',this)">🤝 Meeting Summary</div>
   <div class="tab" onclick="showTab('missreport',this)">📋 Missed Report</div>
   <div class="tab" onclick="showTab('overdue',this)">🔴 Overdue Jobs</div>
+  <div class="tab" onclick="showTab('impact',this)">📊 Impact Analysis</div>
 </div>
 
 <div class="main">
@@ -322,6 +323,7 @@ tr.clickable-row{cursor:pointer} tr.clickable-row:hover td{background:#e8f0fb!im
     </div>
     <div class="quick-btns">
       <button class="qbtn" onclick="setQuick('7days',this)">7 Days Prior</button>
+      <button class="qbtn" onclick="setQuick('12days',this)">12 Days Prior</button>
       <button class="qbtn" onclick="setQuick('15days',this)">15 Days Prior</button>
       <button class="qbtn" onclick="setQuick('thismonth',this)">This Month</button>
       <button class="qbtn" onclick="setQuick('lastmonth',this)">Last Month</button>
@@ -726,6 +728,42 @@ tr.clickable-row{cursor:pointer} tr.clickable-row:hover td{background:#e8f0fb!im
   </div>
 </div>
 
+<!-- ===================== IMPACT ANALYSIS TAB ===================== -->
+<div id="tab-impact" class="panel">
+  <!-- Summary cards -->
+  <div class="cards" style="margin-bottom:14px">
+    <div class="card"><div class="cl">Total Analyzed</div><div class="cv" id="imp-total">—</div></div>
+    <div class="card" style="background:#e8f5e8"><div class="cl">🟢 Green</div><div class="cv" id="imp-green" style="color:#2a6e2a">—</div></div>
+    <div class="card" style="background:#fff3e0"><div class="cl">🟡 Yellow (+1 Day)</div><div class="cv" id="imp-yellow" style="color:#b5541a">—</div></div>
+    <div class="card" style="background:#faeaea"><div class="cl">🔴 Red (+2 Days+)</div><div class="cv" id="imp-red" style="color:#a02020">—</div></div>
+    <div class="card" style="background:#eee"><div class="cl">⚪ Incomplete</div><div class="cv" id="imp-grey" style="color:#666">—</div></div>
+  </div>
+
+  <!-- View toggle + Download -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;font-weight:700;color:var(--text2)">View:</span>
+      <button id="imp-view-daily" onclick="setImpactView('daily')" style="background:#eee;color:#333;border:none;border-radius:999px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">Daily</button>
+      <button id="imp-view-weekly" onclick="setImpactView('weekly')" style="background:#0f3460;color:#fff;border:none;border-radius:999px;padding:6px 16px;font-size:12px;font-weight:700;cursor:pointer">Weekly</button>
+    </div>
+    <button onclick="downloadImpactExcel()" style="background:#0f3460;color:#fff;border:none;border-radius:var(--radius);padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer">⬇️ Download Impact Excel</button>
+  </div>
+
+  <div class="sec">
+    <div class="sec-head"><h2>📊 Dispatch Impact Analysis</h2><span id="imp-info">—</span></div>
+    <div class="search-box"><input type="text" id="imp-search" placeholder="Search JCNO or customer..." oninput="filterImpactTable()"></div>
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th>#</th><th>JCNO</th><th>Job Name</th><th>Customer</th><th>Job Status</th>
+        <th class="num">Print Date</th><th class="num">Punch Date</th><th class="num">Paste Date</th>
+        <th class="num">Rev. Commit</th><th style="text-align:center">Bucket</th>
+        <th class="num">Projected Dispatch</th><th style="text-align:center">Status</th><th>Remark</th>
+      </tr></thead>
+      <tbody id="imp-table"><tr><td colspan="13" style="text-align:center;color:var(--text2);padding:20px">Printing/Punching/Pasting schedule upload kara</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
 </div><!-- /main -->
 
 <script>
@@ -775,7 +813,7 @@ function resetDState(){
   D.monthly=[];D.customers=[];D.missingCust=[];D.missingByProcess=[];
   D.floorJobs=[];D.foldJobs=[];D.agingRows=[];
   D.schedPrinting={};D.schedPunching={};D.schedPasting={};D.schedFolding={};
-  D._rawRows=[];D._keys={};D._filterFrom=null;D._filterTo=null;
+  D._rawRows=[];D._keys={};D._filterFrom=null;D._filterTo=null;D._quickLabel='';
   D.missedEntries=[];
   document.getElementById('date-display').textContent='Upload files to load data';
   document.getElementById('file-status').textContent='';
@@ -818,6 +856,7 @@ var D = {
   _keys: {},
   _filterFrom: null,
   _filterTo: null,
+  _quickLabel: '',
   // Missed report saved entries
   missedEntries: []
 };
@@ -841,6 +880,9 @@ function setQuick(type, btn){
   if(type==='7days'){
     from = new Date(jan2026);
     to = new Date(today); to.setDate(to.getDate()-7); to.setHours(23,59,59,999);
+  } else if(type==='12days'){
+    from = new Date(jan2026);
+    to = new Date(today); to.setDate(to.getDate()-12); to.setHours(23,59,59,999);
   } else if(type==='15days'){
     from = new Date(jan2026);
     to = new Date(today); to.setDate(to.getDate()-15); to.setHours(23,59,59,999);
@@ -863,7 +905,11 @@ function setQuick(type, btn){
   }
   document.getElementById('filter-from').value = toInputDate(from);
   document.getElementById('filter-to').value   = toInputDate(to);
-  if((type==='7days'||type==='15days') && D.loaded){
+  if(type==='7days') D._quickLabel='7 Days Prior';
+  else if(type==='12days') D._quickLabel='12 Days Prior';
+  else if(type==='15days') D._quickLabel='15 Days Prior';
+  else D._quickLabel='';
+  if((type==='7days'||type==='12days'||type==='15days') && D.loaded){
     to.setHours(23,59,59,999);
     D._filterFrom=from; D._filterTo=to;
     document.getElementById('filter-info-text').textContent='Showing: '+fmtDate(from)+' -> '+fmtDate(to);
@@ -873,6 +919,7 @@ function setQuick(type, btn){
 
 function onDateChange(){
   document.querySelectorAll('.qbtn').forEach(function(b){b.classList.remove('active');});
+  D._quickLabel='';
 }
 
 function applyDateFilter(){
@@ -884,6 +931,7 @@ function applyDateFilter(){
   to.setHours(23,59,59,999);
   D._filterFrom = from;
   D._filterTo   = to;
+  D._quickLabel = '';
   document.getElementById('filter-info-text').textContent = 'Showing: '+fmtDate(from)+' → '+fmtDate(to);
   reProcessAndRender();
 }
@@ -894,6 +942,7 @@ function resetDateFilter(){
   var maxD = new Date(); maxD.setHours(23,59,59,999);
   D._filterFrom = new Date(minD); D._filterFrom.setHours(0,0,0,0);
   D._filterTo   = new Date(maxD);
+  D._quickLabel = '';
   document.getElementById('filter-from').value = toInputDate(minD);
   document.getElementById('filter-to').value   = toInputDate(maxD);
   document.getElementById('filter-info-text').textContent = '';
@@ -929,6 +978,7 @@ function showTab(id, el){
   if(id==='meeting' && D.loaded) renderMeetingSummary();
   if(id==='missreport') renderMissReport();
   if(id==='overdue' && D.loaded) renderOverdueTab();
+  if(id==='impact' && D.loaded) renderImpactAnalysis();
 }
 
 // ---- LOADING SPINNER ----
@@ -1000,7 +1050,13 @@ function parseScheduleSheet(rows){
   var currentDate = null;
 
   var MONTHS = {JANUARY:0,FEBRUARY:1,MARCH:2,APRIL:3,MAY:4,JUNE:5,
-                JULY:6,AUGUST:7,SEPTEMBER:8,OCTOBER:9,NOVEMBER:10,DECEMBER:11};
+                JULY:6,AUGUST:7,SEPTEMBER:8,OCTOBER:9,NOVEMBER:10,DECEMBER:11,
+                JAN:0,FEB:1,MAR:2,APR:3,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+
+  // Column index of the "MR Date" header, once found in a Punching/Pasting-style header row.
+  // Used so each job row's OWN MR Date column is read directly, instead of relying only
+  // on the day-group header text above it.
+  var mrDateColIdx = -1;
 
   // Excel serial number → correct local Date (NO timezone shift)
   // cellDates:false वापरल्यामुळे dates येतात as raw numbers (e.g. 46115)
@@ -1064,14 +1120,18 @@ function parseScheduleSheet(rows){
     // JCNO col0 → Printing job row
     if(isJCNO(col0) && currentDate){
       var jcno = String(col0).trim();
-      if(!map[jcno]) map[jcno] = fmtD(currentDate);
+      if(!/JG/i.test(jcno) && !map[jcno]) map[jcno] = fmtD(currentDate); // skip GP (JG) doc IDs — this schedule is AIA only
       continue;
     }
 
     // JCNO col1 → Punching/Pasting job row
-    if(isJCNO(col1) && currentDate){
+    if(isJCNO(col1)){
       var jcno = String(col1).trim();
-      if(!map[jcno]) map[jcno] = fmtD(currentDate);
+      // Prefer this row's own "MR Date" column (if that header was found above); else
+      // fall back to the last day-group header date, exactly as before.
+      var rowDate = (mrDateColIdx >= 0 && row.length > mrDateColIdx) ? tryDate(row[mrDateColIdx]) : null;
+      var useDate = rowDate || currentDate;
+      if(useDate && !/JG/i.test(jcno) && !map[jcno]) map[jcno] = fmtD(useDate); // skip GP (JG) doc IDs — this schedule is AIA only
       continue;
     }
 
@@ -1080,6 +1140,10 @@ function parseScheduleSheet(rows){
     // Job rows contain Qty/CutSheets numbers that can accidentally match date serial range.
     if(!isJCNO(col0) && !isJCNO(col1)){
       for(var c = 0; c < row.length; c++){
+        // Detect "MR Date" header column so subsequent job rows can be read directly.
+        if(mrDateColIdx < 0 && typeof row[c] === 'string' && row[c].trim().toUpperCase() === 'MR DATE'){
+          mrDateColIdx = c;
+        }
         var d = tryDate(row[c]);
         if(d){ currentDate = d; break; }
       }
@@ -1529,6 +1593,8 @@ function processTrackRecord(data){
     if(sl==='punching(r)'   || sl==='punching (r)' ) return 'PUNCHING';
 
     if(sl==='stripping(r)'  || sl==='stripping (r)') return 'STRIPPING';
+    if(sl==='lamination(r)' || sl==='lamination (r)' || sl==='lam(r)' || sl==='lam (r)') return 'LAMINATION';
+    if(sl==='vdp(r)'        || sl==='vdp (r)'       ) return 'VDP';
     if(sl==='job cancelled') return 'CANCELLED';
     return 'DD';
   }
@@ -2245,7 +2311,8 @@ function downloadExcel(){
   function set(r,c,v,style){ if(r<grid.length&&c<TOTAL_COLS){grid[r][c]=v; sg[r][c]=style;} }
 
   // ---- ROW 0: Main Title ----
-  set(0,0,'AIA JOB TRACK DASHBOARD  |  '+xlDateRange+'  |  Total Jobs: '+D.totalJobs, cs(C.white,C.mainTitle,true,14,'center'));
+  var xlQuickSuffix = D._quickLabel ? ('  |  '+D._quickLabel) : '';
+  set(0,0,'AIA JOB TRACK DASHBOARD  |  '+xlDateRange+xlQuickSuffix+'  |  Total Jobs: '+D.totalJobs, cs(C.white,C.mainTitle,true,14,'center'));
 
   var B=2; // tables start row
 
@@ -3917,6 +3984,327 @@ function downloadOverdueExcel(){
   ws['!autofilter']={ref:'A1:I'+(grid.length)};
   XLSX.utils.book_append_sheet(wb,ws,'Overdue Jobs');
   XLSX.writeFile(wb,COMPANY+'_Overdue_Jobs_'+fmtDDMMYYYY(today).replace(/\//g,'-')+'.xlsx');
+}
+
+// ===================== IMPACT ANALYSIS TAB =====================
+function parseDMYStr(str){
+  if(!str) return null;
+  var parts = String(str).split('/');
+  if(parts.length < 3) return null;
+  var d = new Date(+parts[2], +parts[1]-1, +parts[0]);
+  d.setHours(0,0,0,0);
+  if(isNaN(d)) return null;
+  return d;
+}
+
+function calcDispatchDateFromPaste(pasteDate){
+  var d = new Date(pasteDate);
+  d.setDate(d.getDate()+1);
+  if(d.getDay()===0){ d.setDate(d.getDate()+1); } // Sunday -> Monday
+  return d;
+}
+
+function buildImpactRows(){
+  var jcnoSet = {};
+  Object.keys(D.schedPrinting||{}).forEach(function(k){ jcnoSet[k]=1; });
+  Object.keys(D.schedPunching||{}).forEach(function(k){ jcnoSet[k]=1; });
+  Object.keys(D.schedPasting||{}).forEach(function(k){ jcnoSet[k]=1; });
+
+  var INCLUDE_STATUSES = ['PRINTING','PUNCHING','PASTING','LAMINATION','STRIPPING','VDP','JOB NOT STARTED'];
+
+  var rows = [];
+  Object.keys(jcnoSet).forEach(function(jcno){
+    var ag = D.agingRows.find(function(r){ return String(r.jcno).trim()===String(jcno).trim(); });
+    var raw = D._rawRows.find(function(r){ return String(r[D._keys.jcnoKey]).trim()===String(jcno).trim(); });
+    var jobName = (ag&&ag.jobName)||(raw&&D._keys.jobNameKey&&String(raw[D._keys.jobNameKey]||'').trim())||'';
+    var cust = (ag&&ag.cust)||(raw&&String(raw[D._keys.custKey]||'').trim())||'—';
+    var jobStatus = (ag&&ag.status)||(raw&&D._keys.statusKey&&String(raw[D._keys.statusKey]||'').trim())||'—';
+
+    // Only show these exact job statuses — Printing / Punching / Pasting / Lamination / Stripping / VDP / Job Not Started
+    if(INCLUDE_STATUSES.indexOf(jobStatus.toUpperCase())<0) return;
+
+    var notInTrackRecord = !ag && !raw;
+
+    var printStr = D.schedPrinting[jcno]||'';
+    var punchStr = D.schedPunching[jcno]||'';
+    var pasteStr = D.schedPasting[jcno]||'';
+
+    var revDate = ag ? (ag.revDate instanceof Date ? ag.revDate : new Date(ag.revDate)) : (raw&&D._keys.revCommitKey ? new Date(raw[D._keys.revCommitKey]) : null);
+    if(revDate && !isNaN(revDate)) revDate.setHours(0,0,0,0); else revDate=null;
+
+    var missing=[];
+    if(!printStr) missing.push('Print');
+    if(!punchStr) missing.push('Punch');
+    if(!pasteStr) missing.push('Paste');
+
+    var bucket = ag ? ag.bucket : '—';
+
+    var dispatchDate=null, diffDays=null, status, remark;
+
+    if(notInTrackRecord){
+      status='grey'; remark='⚠️ JCNO not found in Track Record — verify entry';
+    } else if(pasteStr){
+      var pasteD = parseDMYStr(pasteStr);
+      if(pasteD){
+        dispatchDate = calcDispatchDateFromPaste(pasteD);
+        if(revDate){
+          diffDays = Math.round((dispatchDate-revDate)/86400000);
+          if(diffDays<=0){ status='green'; remark='On time'; }
+          else if(diffDays===1){ status='yellow'; remark='+1 day'; }
+          else { status='red'; remark='+'+diffDays+' days late'; }
+        } else {
+          status='grey'; remark='Rev. Commit date not found';
+        }
+      } else {
+        status='grey'; remark='Schedule Incomplete — Paste date invalid';
+      }
+    } else {
+      status='grey'; remark='Schedule Incomplete — '+missing.join(', ')+' date missing';
+    }
+
+    rows.push({
+      jcno:jcno, jobName:jobName, cust:cust, jobStatus:jobStatus,
+      printStr:printStr||'—', punchStr:punchStr||'—', pasteStr:pasteStr||'—',
+      revCommit: revDate?fmtDDMMYYYY(revDate):'—',
+      bucket: bucket,
+      dispatch: dispatchDate?fmtDDMMYYYY(dispatchDate):'—',
+      diffDays:diffDays, status:status, remark:remark
+    });
+  });
+
+  var order={red:0,yellow:1,green:2,grey:3};
+  rows.sort(function(a,b){ return (order[a.status]-order[b.status]) || String(a.cust).localeCompare(b.cust); });
+  return rows;
+}
+
+var IMPACT_STATUS_CFG={
+  green:{label:'🟢',fg:'#2a6e2a',rowBg:'#f2fbf2'},
+  yellow:{label:'🟡',fg:'#b5541a',rowBg:'#fffaf0'},
+  red:{label:'🔴',fg:'#a02020',rowBg:'#fdf0f0'},
+  grey:{label:'⚪',fg:'#666',rowBg:'#f7f7f7'}
+};
+var _impactRows=[];      // full built rows (unfiltered)
+var _impactView='weekly'; // 'daily' | 'weekly'
+
+function getWeekStart(d){
+  var day=d.getDay(); // 0=Sun..6=Sat
+  var diff=(day===0?-6:1-day);
+  var mon=new Date(d);
+  mon.setDate(d.getDate()+diff);
+  mon.setHours(0,0,0,0);
+  return mon;
+}
+
+function setImpactView(mode){
+  _impactView=mode;
+  document.getElementById('imp-view-daily').style.background = mode==='daily' ? '#0f3460' : '#eee';
+  document.getElementById('imp-view-daily').style.color = mode==='daily' ? '#fff' : '#333';
+  document.getElementById('imp-view-weekly').style.background = mode==='weekly' ? '#0f3460' : '#eee';
+  document.getElementById('imp-view-weekly').style.color = mode==='weekly' ? '#fff' : '#333';
+  renderImpactTable(_impactRows);
+}
+
+function renderImpactAnalysis(){
+  if(!D.loaded){
+    document.getElementById('imp-table').innerHTML='<tr><td colspan="13" style="text-align:center;color:var(--text2);padding:20px">⚠️ Pehle AIA Track Record upload karo</td></tr>';
+    return;
+  }
+  if(COMPANY==='GP'){
+    document.getElementById('imp-table').innerHTML='<tr><td colspan="13" style="text-align:center;color:var(--text2);padding:20px">Impact Analysis सध्या फक्त AIA (Print/Punch/Paste) साठी उपलब्ध आहे.</td></tr>';
+    document.getElementById('imp-total').textContent='0';
+    return;
+  }
+  var hasAnySched = (D.schedPrinting&&Object.keys(D.schedPrinting).length) || (D.schedPunching&&Object.keys(D.schedPunching).length) || (D.schedPasting&&Object.keys(D.schedPasting).length);
+  if(!hasAnySched){
+    document.getElementById('imp-table').innerHTML='<tr><td colspan="13" style="text-align:center;color:var(--text2);padding:20px">Printing/Punching/Pasting schedule files pahile upload kara.</td></tr>';
+    document.getElementById('imp-total').textContent='0';
+    return;
+  }
+
+  var rows = buildImpactRows();
+  _impactRows = rows;
+
+  var counts={red:0,yellow:0,green:0,grey:0};
+  rows.forEach(function(r){ counts[r.status]++; });
+  document.getElementById('imp-total').textContent=rows.length;
+  document.getElementById('imp-green').textContent=counts.green;
+  document.getElementById('imp-yellow').textContent=counts.yellow;
+  document.getElementById('imp-red').textContent=counts.red;
+  document.getElementById('imp-grey').textContent=counts.grey;
+  document.getElementById('imp-info').textContent=rows.length+' jobs analyzed';
+
+  renderImpactTable(rows);
+}
+
+function impactRowHtml(r,n){
+  var cfg=IMPACT_STATUS_CFG[r.status];
+  return '<tr style="background:'+cfg.rowBg+'">'
+    +'<td>'+n+'</td>'
+    +'<td style="font-weight:700;color:#1a5fa8">'+r.jcno+'</td>'
+    +'<td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="'+(r.jobName||'')+'">'+(r.jobName||'—')+'</td>'
+    +'<td>'+r.cust+'</td>'
+    +'<td><span class="badge" style="background:#eaf4fb;color:#16537e;font-size:11px">'+r.jobStatus+'</span></td>'
+    +'<td class="num">'+r.printStr+'</td>'
+    +'<td class="num">'+r.punchStr+'</td>'
+    +'<td class="num">'+r.pasteStr+'</td>'
+    +'<td class="num">'+r.revCommit+'</td>'
+    +'<td style="text-align:center">'+(r.bucket==='—'?'—':'<span style="font-size:11px;font-weight:700;color:#555">'+r.bucket+'</span>')+'</td>'
+    +'<td class="num" style="font-weight:700">'+r.dispatch+'</td>'
+    +'<td style="text-align:center"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:'+cfg.fg+'" title="'+r.status+'"></span></td>'
+    +'<td style="font-size:11px;color:'+cfg.fg+';font-weight:600">'+r.remark+'</td>'
+    +'</tr>';
+}
+
+function renderImpactTable(rows){
+  var tbody=document.getElementById('imp-table');
+  if(!rows.length){
+    tbody.innerHTML='<tr><td colspan="13" style="text-align:center;color:var(--text2);padding:30px">🎉 Koi data nahi!</td></tr>';
+    return;
+  }
+
+  if(_impactView==='daily'){
+    var html='';
+    rows.forEach(function(r,i){ html+=impactRowHtml(r,i+1); });
+    tbody.innerHTML=html;
+    return;
+  }
+
+  // WEEKLY grouped view
+  var groups={}; // key: monday timestamp or 'unsched', value: {label, rows:[]}
+  rows.forEach(function(r){
+    var pasteD = r.pasteStr && r.pasteStr!=='—' ? parseDMYStr(r.pasteStr) : null;
+    var dispatchD = pasteD ? calcDispatchDateFromPaste(pasteD) : null;
+    var key, label;
+    if(dispatchD){
+      var mon=getWeekStart(dispatchD);
+      var sun=new Date(mon); sun.setDate(mon.getDate()+6);
+      key=mon.getTime();
+      label='Week of '+fmtDDMMYYYY(mon)+' – '+fmtDDMMYYYY(sun);
+    } else {
+      key='unsched'; label='⚪ No Paste Date / Unscheduled';
+    }
+    if(!groups[key]){ groups[key]={label:label,rows:[],counts:{red:0,yellow:0,green:0,grey:0}}; }
+    groups[key].rows.push(r);
+    groups[key].counts[r.status]++;
+  });
+
+  var keys=Object.keys(groups).sort(function(a,b){
+    if(a==='unsched') return 1;
+    if(b==='unsched') return -1;
+    return (+a)-(+b);
+  });
+
+  var html='', n=0;
+  keys.forEach(function(k){
+    var g=groups[k];
+    html+='<tr style="background:#d6e4f0">'
+      +'<td colspan="13" style="font-weight:700;font-size:12px;color:#0f3460;padding:6px 11px">'
+        +'📅 '+g.label+' — '+g.rows.length+' job'+(g.rows.length>1?'s':'')
+        +'&nbsp;&nbsp;<span style="color:#2a6e2a">🟢'+g.counts.green+'</span>'
+        +'&nbsp;<span style="color:#b5541a">🟡'+g.counts.yellow+'</span>'
+        +'&nbsp;<span style="color:#a02020">🔴'+g.counts.red+'</span>'
+        +'&nbsp;<span style="color:#666">⚪'+g.counts.grey+'</span>'
+      +'</td></tr>';
+    g.rows.forEach(function(r){ n++; html+=impactRowHtml(r,n); });
+  });
+  tbody.innerHTML=html;
+}
+
+function filterImpactTable(){
+  var q=(document.getElementById('imp-search').value||'').toLowerCase();
+  if(!_impactRows.length) return;
+  var filtered=q?_impactRows.filter(function(r){
+    return String(r.jcno).toLowerCase().includes(q)||r.cust.toLowerCase().includes(q)||(r.jobName||'').toLowerCase().includes(q);
+  }):_impactRows;
+  renderImpactTable(filtered);
+}
+
+function downloadImpactExcel(){
+  if(!_impactRows.length){ alert('Koi impact data nahi! Pehle schedule upload kara.'); return; }
+
+  var rows=_impactRows;
+  var wb=XLSX.utils.book_new();
+  var today=new Date();
+  var hdrs=['#','JCNO','Job Name','Customer','Job Status','Print Date','Punch Date','Paste Date','Rev. Commit','Bucket','Projected Dispatch','Status','Remark'];
+  var NC=hdrs.length;
+
+  var BDR={top:{style:'thin',color:{rgb:'FFBBBBBB'}},bottom:{style:'thin',color:{rgb:'FFBBBBBB'}},left:{style:'thin',color:{rgb:'FFBBBBBB'}},right:{style:'thin',color:{rgb:'FFBBBBBB'}}};
+  var BDR_HDR={top:{style:'medium',color:{rgb:'FF000000'}},bottom:{style:'medium',color:{rgb:'FF000000'}},left:{style:'thin',color:{rgb:'FFFFFFFF'}},right:{style:'thin',color:{rgb:'FFFFFFFF'}}};
+
+  function stTitle(){ return {font:{bold:true,color:{rgb:'FFFFFFFF'},sz:12},fill:{fgColor:{rgb:'FF1A1A2E'}},alignment:{horizontal:'left',vertical:'center',wrapText:false}}; }
+  function stHdr(){ return {font:{bold:true,color:{rgb:'FFFFFFFF'},sz:9},fill:{fgColor:{rgb:'FF0F3460'}},alignment:{horizontal:'center',vertical:'center',wrapText:true},border:BDR_HDR}; }
+  function stData(fg,bg,al,bold,sz){ return {font:{bold:!!bold,color:{rgb:fg||'FF1A1A2E'},sz:sz||9},fill:{fgColor:{rgb:bg||'FFFFFFFF'}},alignment:{horizontal:al||'left',vertical:'center'},border:BDR}; }
+  function stGroup(){ return {font:{bold:true,color:{rgb:'FF0F3460'},sz:10},fill:{fgColor:{rgb:'FFD6E4F0'}},alignment:{horizontal:'left',vertical:'center'},border:BDR}; }
+
+  var stFG={green:'FF2A6E2A',yellow:'FFB5541A',red:'FFA02020',grey:'FF666666'};
+  var stBG={green:'FFEAF7EA',yellow:'FFFFF3E0',red:'FFFAEAEA',grey:'FFF0F0F0'};
+  var stLabel={green:'GREEN',yellow:'YELLOW',red:'RED',grey:'INCOMPLETE'};
+
+  var grid=[], sg=[];
+  function addR(c,s){ grid.push(c); sg.push(s); }
+
+  var titleTxt='DISPATCH IMPACT ANALYSIS — AIA Industries  |  Date: '+fmtDDMMYYYY(today)+'  |  Total: '+rows.length+'  ('+_impactView+' view)';
+  addR([titleTxt].concat(new Array(NC-1).fill('')),
+    [stTitle()].concat(new Array(NC-1).fill({font:{sz:9},fill:{fgColor:{rgb:'FF1A1A2E'}}})));
+  addR(hdrs, hdrs.map(function(){ return stHdr(); }));
+
+  var n=0;
+  if(_impactView==='weekly'){
+    var groups={};
+    rows.forEach(function(r){
+      var pasteD = r.pasteStr && r.pasteStr!=='—' ? parseDMYStr(r.pasteStr) : null;
+      var dispatchD = pasteD ? calcDispatchDateFromPaste(pasteD) : null;
+      var key,label;
+      if(dispatchD){
+        var mon=getWeekStart(dispatchD); var sun=new Date(mon); sun.setDate(mon.getDate()+6);
+        key=mon.getTime(); label='Week of '+fmtDDMMYYYY(mon)+' – '+fmtDDMMYYYY(sun);
+      } else { key='unsched'; label='No Paste Date / Unscheduled'; }
+      if(!groups[key]){ groups[key]={label:label,rows:[]}; }
+      groups[key].rows.push(r);
+    });
+    var keys=Object.keys(groups).sort(function(a,b){ if(a==='unsched') return 1; if(b==='unsched') return -1; return (+a)-(+b); });
+    keys.forEach(function(k){
+      var g=groups[k];
+      addR(['📅 '+g.label+' — '+g.rows.length+' jobs'].concat(new Array(NC-1).fill('')),
+        [stGroup()].concat(new Array(NC-1).fill(stGroup())));
+      g.rows.forEach(function(r){
+        n++;
+        var fg=stFG[r.status], bg=stBG[r.status];
+        addR([n,r.jcno,r.jobName||'',r.cust,r.jobStatus,r.printStr,r.punchStr,r.pasteStr,r.revCommit,r.bucket,r.dispatch,stLabel[r.status],r.remark],
+          [stData('FF888888',bg,'center'),stData('FF1A5FA8',bg,'left',true),stData('FF222222',bg,'left'),
+           stData('FF0F3460',bg,'left'),stData('FF16537E',bg,'center'),stData(fg,bg,'center'),stData(fg,bg,'center'),stData(fg,bg,'center'),
+           stData(fg,bg,'center'),stData(fg,bg,'center'),stData(fg,bg,'center',true),stData(fg,bg,'center',true),stData(fg,bg,'left')]);
+      });
+    });
+  } else {
+    rows.forEach(function(r){
+      n++;
+      var fg=stFG[r.status], bg=stBG[r.status];
+      addR([n,r.jcno,r.jobName||'',r.cust,r.jobStatus,r.printStr,r.punchStr,r.pasteStr,r.revCommit,r.bucket,r.dispatch,stLabel[r.status],r.remark],
+        [stData('FF888888',bg,'center'),stData('FF1A5FA8',bg,'left',true),stData('FF222222',bg,'left'),
+         stData('FF0F3460',bg,'left'),stData('FF16537E',bg,'center'),stData(fg,bg,'center'),stData(fg,bg,'center'),stData(fg,bg,'center'),
+         stData(fg,bg,'center'),stData(fg,bg,'center'),stData(fg,bg,'center',true),stData(fg,bg,'center',true),stData(fg,bg,'left')]);
+    });
+  }
+
+  var ws=XLSX.utils.aoa_to_sheet(grid);
+  for(var ri=0;ri<sg.length;ri++){
+    for(var ci=0;ci<sg[ri].length;ci++){
+      if(sg[ri][ci]){
+        var addr=XLSX.utils.encode_cell({r:ri,c:ci});
+        if(!ws[addr]) ws[addr]={t:'z',v:''};
+        ws[addr].s=sg[ri][ci];
+      }
+    }
+  }
+  ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:NC-1}}];
+  ws['!cols']=[{wch:4},{wch:14},{wch:32},{wch:24},{wch:14},{wch:12},{wch:12},{wch:12},{wch:13},{wch:10},{wch:15},{wch:11},{wch:26}];
+  ws['!freeze']={xSplit:0,ySplit:2};
+  ws['!pageSetup']={orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,paperSize:9};
+  ws['!margins']={left:0.35,right:0.35,top:0.45,bottom:0.45,header:0.15,footer:0.15};
+
+  XLSX.utils.book_append_sheet(wb,ws,'Impact Analysis');
+  XLSX.writeFile(wb,'AIA_Impact_Analysis_'+fmtDDMMYYYY(today).replace(/\//g,'-')+'.xlsx');
 }
 
 // Init
