@@ -813,7 +813,7 @@ function resetDState(){
   D.monthly=[];D.customers=[];D.missingCust=[];D.missingByProcess=[];
   D.floorJobs=[];D.foldJobs=[];D.agingRows=[];
   D.schedPrinting={};D.schedPunching={};D.schedPasting={};D.schedFolding={};
-  D._rawRows=[];D._keys={};D._filterFrom=null;D._filterTo=null;D._quickLabel='';
+  D._rawRows=[];D._keys={};D._filterFrom=null;D._filterTo=null;D._quickLabel='Full Range';
   D.missedEntries=[];
   document.getElementById('date-display').textContent='Upload files to load data';
   document.getElementById('file-status').textContent='';
@@ -856,7 +856,7 @@ var D = {
   _keys: {},
   _filterFrom: null,
   _filterTo: null,
-  _quickLabel: '',
+  _quickLabel: 'Full Range',
   // Missed report saved entries
   missedEntries: []
 };
@@ -905,11 +905,13 @@ function setQuick(type, btn){
   }
   document.getElementById('filter-from').value = toInputDate(from);
   document.getElementById('filter-to').value   = toInputDate(to);
-  if(type==='7days') D._quickLabel='7 Days Prior';
-  else if(type==='12days') D._quickLabel='12 Days Prior';
-  else if(type==='15days') D._quickLabel='15 Days Prior';
-  else D._quickLabel='';
-  if((type==='7days'||type==='12days'||type==='15days') && D.loaded){
+  var QUICK_LABELS={
+    '7days':'7 Days Prior','12days':'12 Days Prior','15days':'15 Days Prior',
+    'thismonth':'This Month','lastmonth':'Last Month','last3':'Last 3 Months',
+    'thisyear':'This Year','jan2026':'Full Range'
+  };
+  D._quickLabel = QUICK_LABELS[type] || '';
+  if(D.loaded){
     to.setHours(23,59,59,999);
     D._filterFrom=from; D._filterTo=to;
     document.getElementById('filter-info-text').textContent='Showing: '+fmtDate(from)+' -> '+fmtDate(to);
@@ -931,7 +933,7 @@ function applyDateFilter(){
   to.setHours(23,59,59,999);
   D._filterFrom = from;
   D._filterTo   = to;
-  D._quickLabel = '';
+  D._quickLabel = 'Custom Range';
   document.getElementById('filter-info-text').textContent = 'Showing: '+fmtDate(from)+' → '+fmtDate(to);
   reProcessAndRender();
 }
@@ -942,8 +944,7 @@ function resetDateFilter(){
   var maxD = new Date(); maxD.setHours(23,59,59,999);
   D._filterFrom = new Date(minD); D._filterFrom.setHours(0,0,0,0);
   D._filterTo   = new Date(maxD);
-  D._quickLabel = '';
-  document.getElementById('filter-from').value = toInputDate(minD);
+  D._quickLabel = 'Full Range';
   document.getElementById('filter-to').value   = toInputDate(maxD);
   document.getElementById('filter-info-text').textContent = '';
   document.querySelectorAll('.qbtn').forEach(function(b){b.classList.remove('active');});
@@ -1587,13 +1588,13 @@ function processTrackRecord(data){
     var st = String(s).trim();
     var sl = st.toLowerCase();
     if(st==='Job Not Started') return 'Job Not Started';
-    if(sl==='printing(r)'   || sl==='printing (r)' ) return 'PRINTING';
-    if(sl==='coating(r)'    || sl==='coating (r)'  ) return 'COATING';
-    if(sl==='pasting(r)'    || sl==='pasting (r)'  ) return 'PASTING';
-    if(sl==='punching(r)'   || sl==='punching (r)' ) return 'PUNCHING';
+    if(sl==='printing(r)'   || sl==='printing (r)'  || sl==='printing(f)'   || sl==='printing (f)' ) return 'PRINTING';
+    if(sl==='coating(r)'    || sl==='coating (r)'   || sl==='coating(f)'    || sl==='coating (f)'  ) return 'COATING';
+    if(sl==='pasting(r)'    || sl==='pasting (r)'   || sl==='pasting(f)'    || sl==='pasting (f)'  ) return 'PASTING';
+    if(sl==='punching(r)'   || sl==='punching (r)'  || sl==='punching(f)'   || sl==='punching (f)' ) return 'PUNCHING';
 
-    if(sl==='stripping(r)'  || sl==='stripping (r)') return 'STRIPPING';
-    if(sl==='lamination(r)' || sl==='lamination (r)' || sl==='lam(r)' || sl==='lam (r)') return 'LAMINATION';
+    if(sl==='stripping(r)'  || sl==='stripping (r)' || sl==='stripping(f)'  || sl==='stripping (f)') return 'STRIPPING';
+    if(sl==='lamination(r)' || sl==='lamination (r)' || sl==='lam(r)' || sl==='lam (r)' || sl==='lamination(f)' || sl==='lamination (f)' || sl==='lam(f)' || sl==='lam (f)') return 'LAMINATION';
     if(sl==='vdp(r)'        || sl==='vdp (r)'       ) return 'VDP';
     if(sl==='job cancelled') return 'CANCELLED';
     return 'DD';
@@ -1720,7 +1721,7 @@ function computeFromRows(rows, k, fromD, toD){
 
   // ---- AGING REPORT ----
   var today3 = new Date(); today3.setHours(23,59,59,999);
-  var pendingStatuses = ['PRINTING','COATING','PASTING','PUNCHING','STRIPPING','Job Not Started'];
+  var pendingStatuses = ['PRINTING','COATING','PASTING','PUNCHING','STRIPPING','LAMINATION','VDP','Job Not Started'];
   D.agingRows = D._rawRows.filter(function(r){
     if(pendingStatuses.indexOf(r[statusKey]) < 0) return false;
     var rd = new Date(r[revCommitKey]);
@@ -1745,7 +1746,7 @@ function computeFromRows(rows, k, fromD, toD){
   }).sort(function(a,b){ return b.days - a.days; });
 
   // Missing list — filter by Commit Date using same fromD/toD as main filter
-  var allowedMiss = ['Job Not Started','PRINTING','COATING','PASTING','PUNCHING','STRIPPING'];
+  var allowedMiss = ['Job Not Started','PRINTING','COATING','PASTING','PUNCHING','STRIPPING','LAMINATION','VDP'];
   var missRows = D._rawRows.filter(function(r){
     if(allowedMiss.indexOf(r[statusKey]) < 0) return false;
     var rd = new Date(r[revCommitKey]);
@@ -1753,7 +1754,7 @@ function computeFromRows(rows, k, fromD, toD){
     return rd >= fromD && rd <= toD;
   });
 
-  var missProcesses = ['PRINTING','COATING','PASTING','PUNCHING','STRIPPING'];
+  var missProcesses = ['PRINTING','COATING','PASTING','PUNCHING','STRIPPING','LAMINATION','VDP'];
   var missMap={};
   missRows.forEach(function(r){
     var c=String(r[custKey]).trim(); var jc=r[jcnoKey];
@@ -2312,7 +2313,7 @@ function downloadExcel(){
 
   // ---- ROW 0: Main Title ----
   var xlQuickSuffix = D._quickLabel ? ('  |  '+D._quickLabel) : '';
-  set(0,0,'AIA JOB TRACK DASHBOARD  |  '+xlDateRange+xlQuickSuffix+'  |  Total Jobs: '+D.totalJobs, cs(C.white,C.mainTitle,true,14,'center'));
+  set(0,0,COMPANY+' JOB TRACK DASHBOARD  |  '+xlDateRange+xlQuickSuffix+'  |  Total Jobs: '+D.totalJobs, cs(C.white,C.mainTitle,true,14,'center'));
 
   var B=2; // tables start row
 
@@ -2549,7 +2550,7 @@ function downloadExcel(){
   // Apply it to the Customer Summary table (most useful for filtering).
   ws['!autofilter'] = {ref: colLetter(0)+String(CUST_START+2)+':'+colLetter(custHdr.length-1)+String(CUST_START+2)};
   ws['!freeze']={xSplit:0,ySplit:B+2};
-  XLSX.utils.book_append_sheet(wb,ws,'AIA Report');
+  XLSX.utils.book_append_sheet(wb,ws,COMPANY+' Report');
 
   // ================================================================
   // SHEET 2 — SUMMARY
@@ -2703,7 +2704,7 @@ function downloadExcel(){
 
   var fromStr=fmtDDMMYYYY(xlFrom).replace(/\//g,'-');
   var toStr=fmtDDMMYYYY(xlTo).replace(/\//g,'-');
-  var fname='AIA_Report_'+fromStr+'_to_'+toStr+'.xlsx';
+  var fname=COMPANY+'_Report_'+fromStr+'_to_'+toStr+'.xlsx';
   XLSX.writeFile(wb,fname);
 }
 
